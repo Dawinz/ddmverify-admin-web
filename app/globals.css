@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-slate-950 text-slate-50 antialiased;
+}
+
+.page-shell {
+  @apply min-h-screen flex flex-col bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950;
+}
+
+.container-shell {
+  @apply max-w-6xl mx-auto px-4 sm:px-6 lg:px-8;
+}
+
