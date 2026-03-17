@@ -38,20 +38,6 @@ export default function LoginPage() {
         return;
       }
       const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? '';
-      // Ensure the user exists in our backend users table (same as mobile app flow)
-      const syncRes = await fetch(`${apiUrl}/auth/sync`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({}),
-      });
-      if (!syncRes.ok) {
-        setError('Failed to sync user with backend');
-        return;
-      }
-
       const meRes = await fetch(`${apiUrl}/users/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
