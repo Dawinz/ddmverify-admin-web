@@ -9,6 +9,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState<'login' | 'register'>('login');
   const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
@@ -16,6 +17,16 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
+      if (mode === 'register') {
+        const { error: signUpError } = await supabase.auth.signUp({ email, password });
+        if (signUpError) {
+          setError(signUpError.message);
+          return;
+        }
+        setError('Registered. Check your email to confirm, then contact support to be marked as admin.');
+        return;
+      }
+
       const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
       if (signInError) {
         setError(signInError.message);
@@ -76,7 +87,18 @@ export default function LoginPage() {
           </div>
           {error && <p style={{ color: '#dc2626', fontSize: 14, marginBottom: 16 }}>{error}</p>}
           <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? 'Signing in…' : 'Sign in'}
+            {loading ? (mode === 'login' ? 'Signing in…' : 'Registering…') : mode === 'login' ? 'Sign in' : 'Register'}
+          </button>
+          <button
+            type="button"
+            className="btn"
+            style={{ marginLeft: 8 }}
+            onClick={() => {
+              setError('');
+              setMode((m) => (m === 'login' ? 'register' : 'login'));
+            }}
+          >
+            {mode === 'login' ? 'Need an account? Register' : 'Back to login'}
           </button>
         </form>
       </div>
