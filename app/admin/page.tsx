@@ -19,7 +19,12 @@ export default function AdminDashboard() {
   useEffect(() => {
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) return;
+      if (!session?.access_token) {
+        // Temporarily allow dashboard to render even without auth
+        setStats({ users: 0, agents: 0, properties: 0, pending: 0 });
+        setLoading(false);
+        return;
+      }
       try {
         const [usersRes, agentsRes, propertiesRes, pendingRes] = await Promise.all([
           apiGet<{ items: unknown[] }>('/admin/users', session.access_token),
