@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   title: 'DDM Verify Admin',
   description: 'Admin dashboard for DDM Verify',
   icons: {
-    icon: '/favicon.ico',
+    icon: '/icon',
   },
 };
 
