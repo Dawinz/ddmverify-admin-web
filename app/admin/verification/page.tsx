@@ -126,7 +126,7 @@ export default function AdminVerificationPage() {
       <h1 className="page-title">Verification (pending)</h1>
       {error && <p style={{ color: '#dc2626', marginBottom: 16 }}>{error}</p>}
       <div className="panel panel-scroll">
-        <table>
+        <table className="admin-table">
           <thead>
             <tr>
               <th>Title</th>
@@ -143,33 +143,34 @@ export default function AdminVerificationPage() {
             {items.length === 0 && <tr><td colSpan={8} style={{ textAlign: 'center', padding: 24 }}>No pending verifications</td></tr>}
             {items.map((p) => (
               <tr key={p.id}>
-                <td>{p.title}</td>
-                <td>{p.location ?? '—'}</td>
-                <td>{p.category}</td>
-                <td>{new Date(p.created_at).toLocaleDateString()}</td>
-                <td>{p.verification_stage ?? 1}/7</td>
-                <td>{p.land_search_status ?? ((p.verification_stage ?? 1) >= 4 ? 'in_progress' : 'not_started')}</td>
-                <td>{p.deal_status ?? 'active'}</td>
+                <td style={{ minWidth: 170 }}>{p.title}</td>
+                <td style={{ minWidth: 180 }}>{p.location ?? '—'}</td>
+                <td style={{ whiteSpace: 'nowrap' }}>{p.category}</td>
+                <td style={{ whiteSpace: 'nowrap' }}>{new Date(p.created_at).toLocaleDateString()}</td>
+                <td style={{ whiteSpace: 'nowrap' }}>{p.verification_stage ?? 1}/7</td>
+                <td style={{ whiteSpace: 'nowrap' }}>{p.land_search_status ?? ((p.verification_stage ?? 1) >= 4 ? 'in_progress' : 'not_started')}</td>
+                <td style={{ whiteSpace: 'nowrap' }}>{p.deal_status ?? 'active'}</td>
                 <td>
-                  <button type="button" className="btn btn-neutral" style={{ marginRight: 8 }} onClick={() => moveStage(p.id, Math.min(7, (p.verification_stage ?? 1) + 1))}>
-                    Next Stage
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-neutral"
-                    style={{ marginRight: 8 }}
-                    onClick={() => markLandSearchComplete(p.id)}
-                  >
-                    Mark Land Search
-                  </button>
-                  <button type="button" className="btn btn-success" style={{ marginRight: 8 }} onClick={() => setDealStatus(p.id, 'closed')}>
-                    Close Deal
-                  </button>
-                  <button type="button" className="btn btn-neutral" style={{ marginRight: 8 }} onClick={() => setDealStatus(p.id, 'active')}>
-                    Reopen
-                  </button>
-                  <button type="button" className="btn btn-success" style={{ marginRight: 8 }} onClick={() => approve(p.id)}>Approve</button>
-                  <button type="button" className="btn btn-danger" onClick={() => reject(p.id)}>Reject</button>
+                  <div className="actions-grid">
+                    <button type="button" className="btn btn-neutral" onClick={() => moveStage(p.id, Math.min(7, (p.verification_stage ?? 1) + 1))}>
+                      Next Stage
+                    </button>
+                    <button type="button" className="btn btn-neutral" onClick={() => markLandSearchComplete(p.id)}>
+                      Mark Search
+                    </button>
+                    <button type="button" className="btn btn-success" onClick={() => setDealStatus(p.id, 'closed')}>
+                      Close Deal
+                    </button>
+                    <button type="button" className="btn btn-neutral" onClick={() => setDealStatus(p.id, 'active')}>
+                      Reopen
+                    </button>
+                    <button type="button" className="btn btn-success" onClick={() => approve(p.id)}>
+                      Approve
+                    </button>
+                    <button type="button" className="btn btn-danger" onClick={() => reject(p.id)}>
+                      Reject
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
