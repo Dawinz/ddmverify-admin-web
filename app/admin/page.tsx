@@ -16,51 +16,21 @@ type Stats = {
 };
 
 export default function AdminDashboard() {
-  const usersQ = useAdminQuery<{ items: unknown[] }>({ key: ['admin', 'users'], path: '/admin/users' });
-  const agentsQ = useAdminQuery<{ items: unknown[] }>({ key: ['admin', 'agents'], path: '/admin/agents' });
-  const propertiesQ = useAdminQuery<{ items: unknown[]; total: number }>({
-    key: ['admin', 'properties', 'count'],
-    path: '/admin/properties?limit=1',
+  const statsQ = useAdminQuery<{ stats: Stats }>({
+    key: ['admin', 'stats'],
+    path: '/admin/stats',
   });
-  const pendingQ = useAdminQuery<{ items: unknown[] }>({ key: ['admin', 'verification', 'pending'], path: '/verification/pending' });
-  const viewingsQ = useAdminQuery<{ items: unknown[] }>({
-    key: ['admin', 'bookings', 'viewings'],
-    path: '/bookings/viewings',
-    fallback: { items: [] },
-  });
-  const proofsQ = useAdminQuery<{ items: unknown[] }>({
-    key: ['admin', 'payments', 'proofs'],
-    path: '/payments/proofs',
-    fallback: { items: [] },
-  });
-  const dealsQ = useAdminQuery<{ items: unknown[] }>({
-    key: ['admin', 'deals'],
-    path: '/admin/deals',
-    fallback: { items: [] },
-  });
-  const methodsQ = useAdminQuery<{ items: unknown[] }>({
-    key: ['admin', 'payment-methods'],
-    path: '/admin/payment-methods',
-    fallback: { items: [] },
-  });
-
-  const loading = [usersQ, agentsQ, propertiesQ, pendingQ, viewingsQ, proofsQ, dealsQ, methodsQ].some((q) => q.isLoading);
-  const anyError = [usersQ, agentsQ, propertiesQ, pendingQ, viewingsQ, proofsQ, dealsQ, methodsQ]
-    .map((q) => q.error)
-    .find(Boolean) as Error | undefined;
-
-  const stats: Stats = {
-    users: usersQ.data?.items.length ?? 0,
-    agents: agentsQ.data?.items.length ?? 0,
-    properties: propertiesQ.data?.total ?? propertiesQ.data?.items.length ?? 0,
-    pending: pendingQ.data?.items.length ?? 0,
-    viewings: viewingsQ.data?.items.length ?? 0,
-    proofs: proofsQ.data?.items.length ?? 0,
-    deals: dealsQ.data?.items.length ?? 0,
-    paymentMethods: methodsQ.data?.items.length ?? 0,
+  const stats = statsQ.data?.stats ?? {
+    users: 0,
+    agents: 0,
+    properties: 0,
+    pending: 0,
+    viewings: 0,
+    proofs: 0,
+    deals: 0,
+    paymentMethods: 0,
   };
-
-  if (loading) return <p className="muted">Loading dashboard...</p>;
+  if (statsQ.isLoading) return <p className="muted">Loading dashboard...</p>;
 
   const cards = [
     { label: 'Users', value: stats.users, href: '/admin/users' },
@@ -80,7 +50,7 @@ export default function AdminDashboard() {
         <ShieldCheck size={16} />
         DDM Verify admin overview with cached live data.
       </p>
-      {anyError && <p style={{ color: '#dc2626', marginBottom: 16 }}>{anyError.message}</p>}
+      {statsQ.error && <p style={{ color: '#dc2626', marginBottom: 16 }}>{(statsQ.error as Error).message}</p>}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16 }}>
         {cards.map(({ label, value, href }) => (
           <Link
