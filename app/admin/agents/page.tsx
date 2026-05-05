@@ -56,7 +56,7 @@ export default function AdminAgentsPage() {
               <th>Badge Status</th>
               <th>Document</th>
               <th>Created</th>
-              <th>Actions</th>
+              <th className="actions-col">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -74,16 +74,18 @@ export default function AdminAgentsPage() {
                   )}
                 </td>
                 <td>{new Date(a.created_at).toLocaleDateString()}</td>
-                <td>
+                <td className="actions-col">
+                  <div className="actions-inline">
                   <button type="button" className={`btn ${a.verified ? 'btn-danger' : 'btn-success'}`} onClick={() => toggleMutation.mutate(a)}>
                     {a.verified ? 'Unverify' : 'Approve'}
                   </button>
-                  <button type="button" className="btn btn-success" style={{ marginLeft: 8 }} onClick={() => badgeMutation.mutate({ agent: a, status: 'approved' })}>
+                  <button type="button" className="btn btn-success" onClick={() => badgeMutation.mutate({ agent: a, status: 'approved' })}>
                     Badge Approve
                   </button>
-                  <button type="button" className="btn btn-danger" style={{ marginLeft: 8 }} onClick={() => badgeMutation.mutate({ agent: a, status: 'rejected' })}>
+                  <button type="button" className="btn btn-danger" onClick={() => badgeMutation.mutate({ agent: a, status: 'rejected' })}>
                     Badge Reject
                   </button>
+                  </div>
                 </td>
               </tr>
             ))}

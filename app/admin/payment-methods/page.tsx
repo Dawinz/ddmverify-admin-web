@@ -42,7 +42,7 @@ export default function AdminPaymentMethodsPage() {
               <th>Name</th>
               <th>Channel</th>
               <th>Enabled</th>
-              <th>Actions</th>
+              <th className="actions-col">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -56,10 +56,12 @@ export default function AdminPaymentMethodsPage() {
                 <td>{m.name}</td>
                 <td>{m.channel}</td>
                 <td>{m.enabled === false ? 'No' : 'Yes'}</td>
-                <td>
+                <td className="actions-col">
+                  <div className="actions-inline">
                   <button type="button" className={`btn ${m.enabled === false ? 'btn-success' : 'btn-danger'}`} onClick={() => toggleMutation.mutate(m)}>
                     {m.enabled === false ? 'Enable' : 'Disable'}
                   </button>
+                  </div>
                 </td>
               </tr>
             ))}

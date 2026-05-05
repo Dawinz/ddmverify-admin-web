@@ -42,7 +42,7 @@ export default function AdminPropertiesPage() {
               <th>Status</th>
               <th>Agent</th>
               <th>Created</th>
-              <th>Actions</th>
+              <th className="actions-col">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -54,7 +54,8 @@ export default function AdminPropertiesPage() {
                 <td>{p.verification_status}</td>
                 <td>{p.agent_email}</td>
                 <td>{new Date(p.created_at).toLocaleDateString()}</td>
-                <td>
+                <td className="actions-col">
+                  <div className="actions-inline">
                   <button
                     type="button"
                     className="btn btn-danger"
@@ -70,12 +71,12 @@ export default function AdminPropertiesPage() {
                     target="_blank"
                     rel="noreferrer"
                     className="btn btn-neutral"
-                    style={{ marginLeft: 8 }}
                     title={`Property ID: ${p.id}`}
                   >
                     <ExternalLink size={13} />
                     View
                   </a>
+                  </div>
                 </td>
               </tr>
             ))}

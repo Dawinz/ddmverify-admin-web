@@ -53,7 +53,7 @@ export default function AdminDealsPage() {
               <th>Verification</th>
               <th>Status</th>
               <th>Updated</th>
-              <th>Actions</th>
+              <th className="actions-col">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -70,13 +70,15 @@ export default function AdminDealsPage() {
                 <td>{d.verification_stage ?? 1}/7</td>
                 <td>{d.status ?? 'active'}</td>
                 <td>{d.updated_at ? new Date(d.updated_at).toLocaleString() : '—'}</td>
-                <td>
-                  <button type="button" className="btn btn-success" style={{ marginRight: 8 }} onClick={() => statusMutation.mutate({ deal: d, status: 'closed' })}>
+                <td className="actions-col">
+                  <div className="actions-inline">
+                  <button type="button" className="btn btn-success" onClick={() => statusMutation.mutate({ deal: d, status: 'closed' })}>
                     Close
                   </button>
                   <button type="button" className="btn btn-neutral" onClick={() => statusMutation.mutate({ deal: d, status: 'active' })}>
                     Reopen
                   </button>
+                  </div>
                 </td>
               </tr>
             ))}

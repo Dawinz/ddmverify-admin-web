@@ -44,7 +44,7 @@ export default function AdminBookingsPage() {
               <th>Buyer</th>
               <th>Viewing Slot</th>
               <th>State</th>
-              <th>Actions</th>
+              <th className="actions-col">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -61,16 +61,18 @@ export default function AdminBookingsPage() {
                 <td>{b.user_name ?? '—'}</td>
                 <td>{b.viewing_slot ?? '—'}</td>
                 <td>{b.viewing_state ?? 'pending'}</td>
-                <td>
-                  <button type="button" className="btn btn-neutral" style={{ marginRight: 8 }} onClick={() => updateMutation.mutate({ id: b.id, state: 'scheduled' })}>
+                <td className="actions-col">
+                  <div className="actions-inline">
+                  <button type="button" className="btn btn-neutral" onClick={() => updateMutation.mutate({ id: b.id, state: 'scheduled' })}>
                     Schedule
                   </button>
-                  <button type="button" className="btn btn-success" style={{ marginRight: 8 }} onClick={() => updateMutation.mutate({ id: b.id, state: 'completed' })}>
+                  <button type="button" className="btn btn-success" onClick={() => updateMutation.mutate({ id: b.id, state: 'completed' })}>
                     Complete
                   </button>
                   <button type="button" className="btn btn-danger" onClick={() => updateMutation.mutate({ id: b.id, state: 'cancelled' })}>
                     Cancel
                   </button>
+                  </div>
                 </td>
               </tr>
             ))}
