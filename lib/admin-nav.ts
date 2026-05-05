@@ -17,7 +17,7 @@ export const adminNav = [
   { href: '/admin/properties', label: 'Properties', icon: Building2 },
   { href: '/admin/bookings', label: 'Bookings', icon: House },
   { href: '/admin/deals', label: 'Deals', icon: Handshake },
-  { href: '/admin/payment-methods', label: 'Payment Methods', icon: CreditCard },
+  { href: '/admin/payment-methods', label: 'Payment Controls', icon: CreditCard },
   { href: '/admin/payment-proofs', label: 'Payment Proofs', icon: BookOpenCheck },
   { href: '/admin/verification', label: 'Verification', icon: ShieldCheck },
 ] as const;
