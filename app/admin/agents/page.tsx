@@ -1,55 +1,60 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
-import { apiGet, apiPatch } from '@/lib/api';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiPatch, apiPost } from '@/lib/api';
+import { getAccessToken, useAdminQuery } from '@/lib/use-admin-query';
 
-type Agent = { id: string; user_id: string; agency_name: string | null; verified: boolean; created_at: string; email: string; full_name: string | null; banned: boolean };
+type Agent = {
+  id: string;
+  user_id: string;
+  agency_name: string | null;
+  verified: boolean;
+  verification_badge_status?: string | null;
+  verification_document_url?: string | null;
+  created_at: string;
+  email: string;
+  full_name: string | null;
+  banned: boolean;
+};
 
 export default function AdminAgentsPage() {
-  const [items, setItems] = useState<Agent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const queryClient = useQueryClient();
+  const agentsQ = useAdminQuery<{ items: Agent[] }>({ key: ['admin', 'agents'], path: '/admin/agents' });
+  const items = agentsQ.data?.items ?? [];
+  const toggleMutation = useMutation({
+    mutationFn: async (agent: Agent) => {
+      const token = await getAccessToken();
+      if (!token) throw new Error('No active session.');
+      await apiPatch(`/admin/agents/${agent.id}`, token, { verified: !agent.verified });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] }),
+  });
+  const badgeMutation = useMutation({
+    mutationFn: async ({ agent, status }: { agent: Agent; status: 'approved' | 'rejected' }) => {
+      const token = await getAccessToken();
+      if (!token) throw new Error('No active session.');
+      await apiPost(`/admin/agents/${agent.id}/badge-review`, token, { status });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] }),
+  });
 
-  async function load() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) return;
-    try {
-      const data = await apiGet<{ items: Agent[] }>('/admin/agents', session.access_token);
-      setItems(data.items);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => { load(); }, []);
-
-  async function toggleVerified(agent: Agent) {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) return;
-    try {
-      await apiPatch(`/admin/agents/${agent.id}`, session.access_token, { verified: !agent.verified });
-      setItems((prev) => prev.map((a) => a.id === agent.id ? { ...a, verified: !a.verified } : a));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to update');
-    }
-  }
-
-  if (loading) return <p>Loading agents…</p>;
+  if (agentsQ.isLoading) return <p className="muted">Loading agents...</p>;
 
   return (
     <div>
-      <h1 style={{ marginBottom: 24 }}>Agents</h1>
-      {error && <p style={{ color: '#dc2626', marginBottom: 16 }}>{error}</p>}
-      <div style={{ background: 'white', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'auto' }}>
+      <h1 className="page-title">Agents</h1>
+      {agentsQ.error && <p style={{ color: '#dc2626', marginBottom: 16 }}>{(agentsQ.error as Error).message}</p>}
+      {toggleMutation.error && <p style={{ color: '#dc2626', marginBottom: 16 }}>{(toggleMutation.error as Error).message}</p>}
+      {badgeMutation.error && <p style={{ color: '#dc2626', marginBottom: 16 }}>{(badgeMutation.error as Error).message}</p>}
+      <div className="panel panel-scroll">
         <table>
           <thead>
             <tr>
               <th>Email</th>
               <th>Agency</th>
               <th>Verified</th>
+              <th>Badge Status</th>
+              <th>Document</th>
               <th>Created</th>
               <th>Actions</th>
             </tr>
@@ -60,10 +65,24 @@ export default function AdminAgentsPage() {
                 <td>{a.email}</td>
                 <td>{a.agency_name ?? '—'}</td>
                 <td>{a.verified ? 'Yes' : 'No'}</td>
+                <td>{a.verification_badge_status ?? 'unverified'}</td>
+                <td>
+                  {a.verification_document_url ? (
+                    <a href={a.verification_document_url} target="_blank" rel="noreferrer">Open</a>
+                  ) : (
+                    '—'
+                  )}
+                </td>
                 <td>{new Date(a.created_at).toLocaleDateString()}</td>
                 <td>
-                  <button type="button" className={`btn ${a.verified ? 'btn-danger' : 'btn-success'}`} onClick={() => toggleVerified(a)}>
+                  <button type="button" className={`btn ${a.verified ? 'btn-danger' : 'btn-success'}`} onClick={() => toggleMutation.mutate(a)}>
                     {a.verified ? 'Unverify' : 'Approve'}
+                  </button>
+                  <button type="button" className="btn btn-success" style={{ marginLeft: 8 }} onClick={() => badgeMutation.mutate({ agent: a, status: 'approved' })}>
+                    Badge Approve
+                  </button>
+                  <button type="button" className="btn btn-danger" style={{ marginLeft: 8 }} onClick={() => badgeMutation.mutate({ agent: a, status: 'rejected' })}>
+                    Badge Reject
                   </button>
                 </td>
               </tr>

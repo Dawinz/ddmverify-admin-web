@@ -4,7 +4,17 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { apiGet, apiPatch } from '@/lib/api';
 
-type PendingItem = { id: string; title: string; location: string | null; category: string; verification_status: string; created_at: string };
+type PendingItem = {
+  id: string;
+  title: string;
+  location: string | null;
+  category: string;
+  verification_status: string;
+  verification_stage?: number;
+  land_search_status?: string | null;
+  deal_status?: string | null;
+  created_at: string;
+};
 
 export default function AdminVerificationPage() {
   const [items, setItems] = useState<PendingItem[]>([]);
@@ -59,13 +69,63 @@ export default function AdminVerificationPage() {
     }
   }
 
+  async function markLandSearchComplete(propertyId: string) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/verification/land-search/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ property_id: propertyId }),
+      });
+      if (!res.ok) throw new Error('Land search update failed');
+      setItems((prev) =>
+        prev.map((p) => (p.id === propertyId ? { ...p, land_search_status: 'completed', verification_stage: Math.max(p.verification_stage ?? 1, 4) } : p)),
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to update land search');
+    }
+  }
+
+  async function moveStage(propertyId: string, stage: number) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/verification/update-stage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ property_id: propertyId, stage }),
+      });
+      if (!res.ok) throw new Error('Stage update failed');
+      setItems((prev) => prev.map((p) => (p.id === propertyId ? { ...p, verification_stage: stage } : p)));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to update stage');
+    }
+  }
+
+  async function setDealStatus(propertyId: string, status: 'closed' | 'active') {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/deals/set-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ property_id: propertyId, status }),
+      });
+      if (!res.ok) throw new Error('Deal status update failed');
+      setItems((prev) => prev.map((p) => (p.id === propertyId ? { ...p, deal_status: status } : p)));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to update deal status');
+    }
+  }
+
   if (loading) return <p>Loading pending verifications…</p>;
 
   return (
     <div>
-      <h1 style={{ marginBottom: 24 }}>Verification (pending)</h1>
+      <h1 className="page-title">Verification (pending)</h1>
       {error && <p style={{ color: '#dc2626', marginBottom: 16 }}>{error}</p>}
-      <div style={{ background: 'white', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'auto' }}>
+      <div className="panel panel-scroll">
         <table>
           <thead>
             <tr>
@@ -73,18 +133,41 @@ export default function AdminVerificationPage() {
               <th>Location</th>
               <th>Category</th>
               <th>Created</th>
+              <th>Stage</th>
+              <th>Gov Search</th>
+              <th>Deal</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {items.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center', padding: 24 }}>No pending verifications</td></tr>}
+            {items.length === 0 && <tr><td colSpan={8} style={{ textAlign: 'center', padding: 24 }}>No pending verifications</td></tr>}
             {items.map((p) => (
               <tr key={p.id}>
                 <td>{p.title}</td>
                 <td>{p.location ?? '—'}</td>
                 <td>{p.category}</td>
                 <td>{new Date(p.created_at).toLocaleDateString()}</td>
+                <td>{p.verification_stage ?? 1}/7</td>
+                <td>{p.land_search_status ?? ((p.verification_stage ?? 1) >= 4 ? 'in_progress' : 'not_started')}</td>
+                <td>{p.deal_status ?? 'active'}</td>
                 <td>
+                  <button type="button" className="btn btn-neutral" style={{ marginRight: 8 }} onClick={() => moveStage(p.id, Math.min(7, (p.verification_stage ?? 1) + 1))}>
+                    Next Stage
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-neutral"
+                    style={{ marginRight: 8 }}
+                    onClick={() => markLandSearchComplete(p.id)}
+                  >
+                    Mark Land Search
+                  </button>
+                  <button type="button" className="btn btn-success" style={{ marginRight: 8 }} onClick={() => setDealStatus(p.id, 'closed')}>
+                    Close Deal
+                  </button>
+                  <button type="button" className="btn btn-neutral" style={{ marginRight: 8 }} onClick={() => setDealStatus(p.id, 'active')}>
+                    Reopen
+                  </button>
                   <button type="button" className="btn btn-success" style={{ marginRight: 8 }} onClick={() => approve(p.id)}>Approve</button>
                   <button type="button" className="btn btn-danger" onClick={() => reject(p.id)}>Reject</button>
                 </td>

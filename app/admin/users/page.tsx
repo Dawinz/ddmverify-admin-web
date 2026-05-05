@@ -1,49 +1,38 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
-import { apiGet, apiPatch } from '@/lib/api';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiPatch } from '@/lib/api';
+import { getAccessToken, useAdminQuery } from '@/lib/use-admin-query';
 
 type User = { id: string; email: string; phone: string | null; full_name: string | null; role: string; banned: boolean; created_at: string };
 
 export default function AdminUsersPage() {
-  const [items, setItems] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const queryClient = useQueryClient();
+  const usersQ = useAdminQuery<{ items: User[] }>({ key: ['admin', 'users'], path: '/admin/users' });
+  const items = usersQ.data?.items ?? [];
 
-  async function load() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) return;
-    try {
-      const data = await apiGet<{ items: User[] }>('/admin/users', session.access_token);
-      setItems(data.items);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load');
-    } finally {
-      setLoading(false);
-    }
-  }
+  const toggleBanMutation = useMutation({
+    mutationFn: async (user: User) => {
+      const token = await getAccessToken();
+      if (!token) throw new Error('No active session.');
+      await apiPatch(`/admin/users/${user.id}`, token, { banned: !user.banned });
+      return user;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+    },
+  });
 
-  useEffect(() => { load(); }, []);
-
-  async function toggleBan(user: User) {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) return;
-    try {
-      await apiPatch(`/admin/users/${user.id}`, session.access_token, { banned: !user.banned });
-      setItems((prev) => prev.map((u) => u.id === user.id ? { ...u, banned: !u.banned } : u));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to update');
-    }
-  }
-
-  if (loading) return <p>Loading users…</p>;
+  if (usersQ.isLoading) return <p className="muted">Loading users...</p>;
 
   return (
     <div>
-      <h1 style={{ marginBottom: 24 }}>Users</h1>
-      {error && <p style={{ color: '#dc2626', marginBottom: 16 }}>{error}</p>}
-      <div style={{ background: 'white', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+      <h1 className="page-title">Users</h1>
+      {usersQ.error && <p style={{ color: '#dc2626', marginBottom: 16 }}>{(usersQ.error as Error).message}</p>}
+      {toggleBanMutation.error && (
+        <p style={{ color: '#dc2626', marginBottom: 16 }}>{(toggleBanMutation.error as Error).message}</p>
+      )}
+      <div className="panel panel-scroll">
         <table>
           <thead>
             <tr>
@@ -64,7 +53,11 @@ export default function AdminUsersPage() {
                 <td>{u.banned ? 'Yes' : 'No'}</td>
                 <td>{new Date(u.created_at).toLocaleDateString()}</td>
                 <td>
-                  <button type="button" className={`btn ${u.banned ? 'btn-success' : 'btn-danger'}`} onClick={() => toggleBan(u)}>
+                  <button
+                    type="button"
+                    className={`btn ${u.banned ? 'btn-success' : 'btn-danger'}`}
+                    onClick={() => toggleBanMutation.mutate(u)}
+                  >
                     {u.banned ? 'Unban' : 'Ban'}
                   </button>
                 </td>

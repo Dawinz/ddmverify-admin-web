@@ -37,16 +37,34 @@ export default function LoginPage() {
         setError('No session returned');
         return;
       }
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? '';
+      const apiUrl = (process.env.NEXT_PUBLIC_API_URL ?? '').trim();
+      if (!apiUrl) {
+        setError('Admin is misconfigured: set NEXT_PUBLIC_API_URL in .env.local (e.g. https://api.ddmverify.com).');
+        await supabase.auth.signOut();
+        return;
+      }
+      let role: string | undefined;
       const meRes = await fetch(`${apiUrl}/users/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!meRes.ok) {
-        setError('Failed to verify user');
-        return;
+      if (meRes.ok) {
+        const { user: profile } = await meRes.json();
+        role = profile?.role;
+      } else {
+        // Fallback: read role directly from Supabase profile table.
+        const userId = data.user?.id;
+        if (userId) {
+          const profileQuery = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', userId)
+            .single();
+          if (!profileQuery.error) {
+            role = profileQuery.data?.role;
+          }
+        }
       }
-      const { user: profile } = await meRes.json();
-      if (profile?.role !== 'admin') {
+      if (role !== 'admin') {
         await supabase.auth.signOut();
         setError('Access denied. Admin role required.');
         return;
@@ -61,9 +79,24 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ background: 'white', padding: 32, borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', maxWidth: 360 }}>
-        <h1 style={{ margin: '0 0 24px', fontSize: 24 }}>DDM Verify Admin</h1>
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 24,
+        background: 'linear-gradient(180deg, #f6f7f9 0%, #e5eef5 100%)',
+      }}
+    >
+      <div className="panel" style={{ padding: 32, maxWidth: 380, width: '100%' }}>
+        <div className="brand-row" style={{ borderBottom: 'none', marginBottom: 14, padding: 0 }}>
+          <div className="brand-logo">DDM</div>
+          <div className="brand-title">
+            <strong style={{ color: '#0f172a' }}>DDM Verify Admin</strong>
+            <span style={{ color: '#6b7280' }}>Secure management portal</span>
+          </div>
+        </div>
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: 16 }}>
             <label style={{ display: 'block', marginBottom: 6, fontSize: 14 }}>Email</label>
@@ -91,7 +124,7 @@ export default function LoginPage() {
           </button>
           <button
             type="button"
-            className="btn"
+            className="btn btn-neutral"
             style={{ marginLeft: 8 }}
             onClick={() => {
               setError('');

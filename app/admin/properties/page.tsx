@@ -1,53 +1,38 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
-import { apiGet, apiDelete } from '@/lib/api';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { ExternalLink } from 'lucide-react';
+import { apiDelete } from '@/lib/api';
+import { getAccessToken, useAdminQuery } from '@/lib/use-admin-query';
 
 type Property = { id: string; title: string; location: string | null; category: string; verification_status: string; created_at: string; agency_name: string | null; agent_email: string };
 
 export default function AdminPropertiesPage() {
-  const [items, setItems] = useState<Property[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const queryClient = useQueryClient();
+  const propertiesQ = useAdminQuery<{ items: Property[]; total: number }>({
+    key: ['admin', 'properties'],
+    path: '/admin/properties?limit=100',
+  });
+  const items = propertiesQ.data?.items ?? [];
+  const total = propertiesQ.data?.total ?? 0;
+  const removeMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const token = await getAccessToken();
+      if (!token) throw new Error('No active session.');
+      await apiDelete(`/admin/properties/${id}`, token);
+      return id;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'properties'] }),
+  });
 
-  async function load() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) return;
-    try {
-      const data = await apiGet<{ items: Property[]; total: number }>('/admin/properties?limit=100', session.access_token);
-      setItems(data.items);
-      setTotal(data.total);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => { load(); }, []);
-
-  async function remove(id: string) {
-    if (!confirm('Delete this property?')) return;
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) return;
-    try {
-      await apiDelete(`/admin/properties/${id}`, session.access_token);
-      setItems((prev) => prev.filter((p) => p.id !== id));
-      setTotal((t) => t - 1);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to delete');
-    }
-  }
-
-  if (loading) return <p>Loading properties…</p>;
+  if (propertiesQ.isLoading) return <p className="muted">Loading properties...</p>;
 
   return (
     <div>
-      <h1 style={{ marginBottom: 24 }}>Properties ({total})</h1>
-      {error && <p style={{ color: '#dc2626', marginBottom: 16 }}>{error}</p>}
-      <div style={{ background: 'white', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'auto' }}>
+      <h1 className="page-title">Properties ({total})</h1>
+      {propertiesQ.error && <p style={{ color: '#dc2626', marginBottom: 16 }}>{(propertiesQ.error as Error).message}</p>}
+      {removeMutation.error && <p style={{ color: '#dc2626', marginBottom: 16 }}>{(removeMutation.error as Error).message}</p>}
+      <div className="panel panel-scroll">
         <table>
           <thead>
             <tr>
@@ -70,7 +55,27 @@ export default function AdminPropertiesPage() {
                 <td>{p.agent_email}</td>
                 <td>{new Date(p.created_at).toLocaleDateString()}</td>
                 <td>
-                  <button type="button" className="btn btn-danger" onClick={() => remove(p.id)}>Delete</button>
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    onClick={() => {
+                      if (!confirm('Delete this property?')) return;
+                      removeMutation.mutate(p.id);
+                    }}
+                  >
+                    Delete
+                  </button>
+                  <a
+                    href={`https://www.ddmverify.com`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn btn-neutral"
+                    style={{ marginLeft: 8 }}
+                    title={`Property ID: ${p.id}`}
+                  >
+                    <ExternalLink size={13} />
+                    View
+                  </a>
                 </td>
               </tr>
             ))}
