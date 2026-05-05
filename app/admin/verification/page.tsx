@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { apiGet, apiPatch } from '@/lib/api';
+import { apiGet } from '@/lib/api';
 
 type PendingItem = {
   id: string;
