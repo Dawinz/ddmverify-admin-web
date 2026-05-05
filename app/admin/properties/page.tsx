@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ExternalLink } from 'lucide-react';
 import { apiDelete } from '@/lib/api';
@@ -9,12 +10,28 @@ type Property = { id: string; title: string; location: string | null; category: 
 
 export default function AdminPropertiesPage() {
   const queryClient = useQueryClient();
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(25);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   const propertiesQ = useAdminQuery<{ items: Property[]; total: number }>({
-    key: ['admin', 'properties'],
-    path: '/admin/properties?limit=100',
+    key: ['admin', 'properties', String(page), String(limit)],
+    path: `/admin/properties?page=${page}&limit=${limit}`,
   });
-  const items = propertiesQ.data?.items ?? [];
+  const allItems = propertiesQ.data?.items ?? [];
+  const items = allItems.filter((p) => {
+    const q = search.trim().toLowerCase();
+    const status = p.verification_status.toLowerCase();
+    const matchesQuery =
+      q.length === 0 ||
+      p.title.toLowerCase().includes(q) ||
+      (p.location ?? '').toLowerCase().includes(q) ||
+      p.agent_email.toLowerCase().includes(q);
+    const matchesStatus = statusFilter === 'all' || status === statusFilter;
+    return matchesQuery && matchesStatus;
+  });
   const total = propertiesQ.data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
   const removeMutation = useMutation({
     mutationFn: async (id: string) => {
       const token = await getAccessToken();
@@ -30,6 +47,38 @@ export default function AdminPropertiesPage() {
   return (
     <div>
       <h1 className="page-title">Properties ({total})</h1>
+      <div className="panel" style={{ marginBottom: 16, padding: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1fr) minmax(130px, 170px) minmax(120px, 160px)', gap: 10 }}>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search title, location, agent..."
+            style={{ maxWidth: '100%' }}
+          />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            style={{ border: '1px solid #d1d5db', borderRadius: 8, padding: '0.6rem 0.75rem' }}
+          >
+            <option value="all">All status</option>
+            <option value="pending">pending</option>
+            <option value="verified">verified</option>
+            <option value="rejected">rejected</option>
+          </select>
+          <select
+            value={String(limit)}
+            onChange={(e) => {
+              setLimit(Number(e.target.value));
+              setPage(1);
+            }}
+            style={{ border: '1px solid #d1d5db', borderRadius: 8, padding: '0.6rem 0.75rem' }}
+          >
+            <option value="10">10 / page</option>
+            <option value="25">25 / page</option>
+            <option value="50">50 / page</option>
+          </select>
+        </div>
+      </div>
       {propertiesQ.error && <p style={{ color: '#dc2626', marginBottom: 16 }}>{(propertiesQ.error as Error).message}</p>}
       {removeMutation.error && <p style={{ color: '#dc2626', marginBottom: 16 }}>{(removeMutation.error as Error).message}</p>}
       <div className="panel panel-scroll">
@@ -46,6 +95,13 @@ export default function AdminPropertiesPage() {
             </tr>
           </thead>
           <tbody>
+            {items.length === 0 && (
+              <tr>
+                <td colSpan={7} style={{ textAlign: 'center', padding: 24 }}>
+                  No matching properties
+                </td>
+              </tr>
+            )}
             {items.map((p) => (
               <tr key={p.id}>
                 <td>{p.title}</td>
@@ -82,6 +138,19 @@ export default function AdminPropertiesPage() {
             ))}
           </tbody>
         </table>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
+        <span className="muted">
+          Page {page} of {totalPages} ({total} total properties)
+        </span>
+        <div className="actions-inline">
+          <button type="button" className="btn btn-neutral" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+            Previous
+          </button>
+          <button type="button" className="btn btn-neutral" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+            Next
+          </button>
+        </div>
       </div>
     </div>
   );

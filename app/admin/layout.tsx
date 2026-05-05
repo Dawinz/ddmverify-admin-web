@@ -11,7 +11,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="admin-shell">
       <aside className="admin-sidebar">
         <div className="brand-row">
-          <div className="brand-logo">DDM</div>
+          <img src="/icon" alt="DDM Verify" className="brand-logo-img" />
           <div className="brand-title">
             <strong>DDM Verify</strong>
             <span>Admin Control Center</span>

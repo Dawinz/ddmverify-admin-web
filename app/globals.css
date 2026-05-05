@@ -70,6 +70,14 @@ a {
   background: linear-gradient(135deg, var(--ddm-accent-deep), var(--ddm-accent), var(--ddm-teal));
 }
 
+.brand-logo-img {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  object-fit: cover;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.35);
+}
+
 .brand-title {
   display: flex;
   flex-direction: column;

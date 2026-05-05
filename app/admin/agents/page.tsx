@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiPatch, apiPost } from '@/lib/api';
 import { getAccessToken, useAdminQuery } from '@/lib/use-admin-query';
@@ -19,8 +20,16 @@ type Agent = {
 
 export default function AdminAgentsPage() {
   const queryClient = useQueryClient();
-  const agentsQ = useAdminQuery<{ items: Agent[] }>({ key: ['admin', 'agents'], path: '/admin/agents' });
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(25);
+  const agentsQ = useAdminQuery<{ items: Agent[]; page: number; limit: number; total: number }>({
+    key: ['admin', 'agents', String(page), String(limit), search],
+    path: `/admin/agents?page=${page}&limit=${limit}&search=${encodeURIComponent(search.trim())}`,
+  });
   const items = agentsQ.data?.items ?? [];
+  const total = agentsQ.data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
   const toggleMutation = useMutation({
     mutationFn: async (agent: Agent) => {
       const token = await getAccessToken();
@@ -43,6 +52,31 @@ export default function AdminAgentsPage() {
   return (
     <div>
       <h1 className="page-title">Agents</h1>
+      <div className="panel" style={{ marginBottom: 16, padding: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1fr) minmax(120px, 160px)', gap: 10 }}>
+          <input
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            placeholder="Search email or agency..."
+            style={{ maxWidth: '100%' }}
+          />
+          <select
+            value={String(limit)}
+            onChange={(e) => {
+              setLimit(Number(e.target.value));
+              setPage(1);
+            }}
+            style={{ border: '1px solid #d1d5db', borderRadius: 8, padding: '0.6rem 0.75rem' }}
+          >
+            <option value="10">10 / page</option>
+            <option value="25">25 / page</option>
+            <option value="50">50 / page</option>
+          </select>
+        </div>
+      </div>
       {agentsQ.error && <p style={{ color: '#dc2626', marginBottom: 16 }}>{(agentsQ.error as Error).message}</p>}
       {toggleMutation.error && <p style={{ color: '#dc2626', marginBottom: 16 }}>{(toggleMutation.error as Error).message}</p>}
       {badgeMutation.error && <p style={{ color: '#dc2626', marginBottom: 16 }}>{(badgeMutation.error as Error).message}</p>}
@@ -91,6 +125,19 @@ export default function AdminAgentsPage() {
             ))}
           </tbody>
         </table>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
+        <span className="muted">
+          Page {page} of {totalPages} ({total} agents)
+        </span>
+        <div className="actions-inline">
+          <button type="button" className="btn btn-neutral" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+            Previous
+          </button>
+          <button type="button" className="btn btn-neutral" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+            Next
+          </button>
+        </div>
       </div>
     </div>
   );
