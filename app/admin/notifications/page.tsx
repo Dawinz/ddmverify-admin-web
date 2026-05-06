@@ -26,6 +26,9 @@ export default function AdminNotificationsPage() {
   const [testTitle, setTestTitle] = useState('');
   const [testBody, setTestBody] = useState('');
   const [testMsg, setTestMsg] = useState('');
+  const [broadcastTitle, setBroadcastTitle] = useState('');
+  const [broadcastBody, setBroadcastBody] = useState('');
+  const [broadcastMsg, setBroadcastMsg] = useState('');
 
   const testPushMutation = useMutation({
     mutationFn: async () => {
@@ -47,6 +50,24 @@ export default function AdminNotificationsPage() {
       setTestMsg(e.message);
     },
   });
+  const broadcastMutation = useMutation({
+    mutationFn: async () => {
+      const token = await getAccessToken();
+      if (!token) throw new Error('No active session.');
+      const title = broadcastTitle.trim();
+      const body = broadcastBody.trim();
+      if (!title) throw new Error('Broadcast title is required.');
+      if (!body) throw new Error('Broadcast body is required.');
+      return apiPost('/admin/notifications/broadcast', token, { title, body });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'notifications-feed'] });
+      setBroadcastMsg('Broadcast submitted. Check feed below for inserted rows.');
+    },
+    onError: (e: Error) => {
+      setBroadcastMsg(e.message);
+    },
+  });
 
   const items = feedQ.data?.items ?? [];
 
@@ -64,6 +85,45 @@ export default function AdminNotificationsPage() {
       {feedQ.error && (
         <p style={{ color: '#dc2626', marginBottom: 16 }}>{(feedQ.error as Error).message}</p>
       )}
+
+      <div className="panel" style={{ marginBottom: 20, padding: 16 }}>
+        <h2 style={{ fontSize: '1rem', margin: '0 0 12px' }}>Send notifications to all installed devices</h2>
+        <p className="muted" style={{ marginBottom: 12, fontSize: 14 }}>
+          Sends to every user that currently has at least one registered device token.
+        </p>
+        <div style={{ display: 'grid', gap: 10, maxWidth: 560 }}>
+          <input
+            value={broadcastTitle}
+            onChange={(e) => {
+              setBroadcastTitle(e.target.value);
+              setBroadcastMsg('');
+            }}
+            placeholder="Broadcast title"
+            style={{ padding: '0.6rem 0.75rem', borderRadius: 8, border: '1px solid #d1d5db' }}
+          />
+          <textarea
+            value={broadcastBody}
+            onChange={(e) => {
+              setBroadcastBody(e.target.value);
+              setBroadcastMsg('');
+            }}
+            placeholder="Broadcast message body"
+            style={{ padding: '0.6rem 0.75rem', borderRadius: 8, border: '1px solid #d1d5db', minHeight: 86 }}
+          />
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={broadcastMutation.isPending}
+            onClick={() => {
+              setBroadcastMsg('');
+              broadcastMutation.mutate();
+            }}
+          >
+            {broadcastMutation.isPending ? 'Sending…' : 'Send to all devices'}
+          </button>
+        </div>
+        {broadcastMsg ? <p style={{ marginTop: 12, fontSize: 14 }}>{broadcastMsg}</p> : null}
+      </div>
 
       <div className="panel" style={{ marginBottom: 20, padding: 16 }}>
         <h2 style={{ fontSize: '1rem', margin: '0 0 12px' }}>Send test push</h2>
