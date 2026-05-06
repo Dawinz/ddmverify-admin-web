@@ -1,4 +1,5 @@
 import {
+  Bell,
   BookOpenCheck,
   Building2,
   CreditCard,
@@ -19,5 +20,6 @@ export const adminNav = [
   { href: '/admin/deals', label: 'Deals', icon: Handshake },
   { href: '/admin/payment-methods', label: 'Payment Controls', icon: CreditCard },
   { href: '/admin/payment-proofs', label: 'Payment Proofs', icon: BookOpenCheck },
+  { href: '/admin/notifications', label: 'Notifications', icon: Bell },
   { href: '/admin/verification', label: 'Verification', icon: ShieldCheck },
 ] as const;
