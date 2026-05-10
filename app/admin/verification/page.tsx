@@ -77,6 +77,27 @@ export default function AdminVerificationPage() {
     }
   }
 
+  async function applyDecision(
+    propertyId: string,
+    endpoint: 'needs-changes' | 'suspend',
+    label: string,
+  ) {
+    const reason = window.prompt(`${label} reason (optional):`) ?? '';
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/verification/${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ property_id: propertyId, reason: reason || undefined }),
+      });
+      if (!res.ok) throw new Error(`${label} failed`);
+      setItems((prev) => prev.filter((p) => p.id !== propertyId));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : `Failed to ${label.toLowerCase()}`);
+    }
+  }
+
   async function markLandSearchComplete(propertyId: string) {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.access_token) return;
@@ -272,6 +293,12 @@ export default function AdminVerificationPage() {
                       </button>
                       <button type="button" className="btn btn-success" onClick={() => approve(p.id)}>
                         Approve
+                      </button>
+                      <button type="button" className="btn btn-neutral" onClick={() => applyDecision(p.id, 'needs-changes', 'Needs changes')}>
+                        Needs changes
+                      </button>
+                      <button type="button" className="btn btn-neutral" onClick={() => applyDecision(p.id, 'suspend', 'Suspend')}>
+                        Suspend
                       </button>
                       <button type="button" className="btn btn-danger" onClick={() => reject(p.id)}>
                         Reject
