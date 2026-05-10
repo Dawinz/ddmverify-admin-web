@@ -91,7 +91,7 @@ export default function LoginPage() {
     >
       <div className="panel" style={{ padding: 32, maxWidth: 380, width: '100%' }}>
         <div className="brand-row" style={{ borderBottom: 'none', marginBottom: 14, padding: 0 }}>
-          <img src="/icon" alt="DDM Verify" className="brand-logo-img" />
+          <img src="/icon.png" alt="DDM Verify" className="brand-logo-img" width={40} height={40} />
           <div className="brand-title">
             <strong style={{ color: '#0f172a' }}>DDM Verify Admin</strong>
             <span style={{ color: '#6b7280' }}>Secure management portal</span>
