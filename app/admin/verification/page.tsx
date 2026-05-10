@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { apiGet } from '@/lib/api';
+import { formatAdminDateTime } from '@/lib/format-datetime';
 
 type PendingItem = {
   id: string;
@@ -238,7 +239,7 @@ export default function AdminVerificationPage() {
                 <td style={{ minWidth: 170 }}>{p.title}</td>
                 <td style={{ minWidth: 180 }}>{p.location ?? '—'}</td>
                 <td style={{ whiteSpace: 'nowrap' }}>{p.category}</td>
-                <td style={{ whiteSpace: 'nowrap' }}>{new Date(p.created_at).toLocaleDateString()}</td>
+                <td style={{ whiteSpace: 'nowrap' }}>{formatAdminDateTime(p.created_at)}</td>
                 <td style={{ whiteSpace: 'nowrap' }}>{stage}/7</td>
                 <td style={{ whiteSpace: 'nowrap' }}>{landSearch}</td>
                 <td style={{ whiteSpace: 'nowrap' }}>{deal}</td>

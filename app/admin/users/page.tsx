@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiPatch } from '@/lib/api';
+import { formatAdminDateTime } from '@/lib/format-datetime';
 import { getAccessToken, useAdminQuery } from '@/lib/use-admin-query';
 
 type User = { id: string; email: string; phone: string | null; full_name: string | null; role: string; banned: boolean; created_at: string };
@@ -85,7 +86,7 @@ export default function AdminUsersPage() {
                 <td>{u.full_name ?? '—'}</td>
                 <td>{u.role}</td>
                 <td>{u.banned ? 'Yes' : 'No'}</td>
-                <td>{new Date(u.created_at).toLocaleDateString()}</td>
+                <td>{formatAdminDateTime(u.created_at)}</td>
                 <td>
                   <button
                     type="button"

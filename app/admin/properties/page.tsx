@@ -1,9 +1,10 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ExternalLink } from 'lucide-react';
 import { apiDelete } from '@/lib/api';
+import { formatAdminDateTime } from '@/lib/format-datetime';
 import { getAccessToken, useAdminQuery } from '@/lib/use-admin-query';
 
 type Property = { id: string; title: string; location: string | null; category: string; verification_status: string; created_at: string; agency_name: string | null; agent_email: string };
@@ -109,7 +110,7 @@ export default function AdminPropertiesPage() {
                 <td>{p.category}</td>
                 <td>{p.verification_status}</td>
                 <td>{p.agent_email}</td>
-                <td>{new Date(p.created_at).toLocaleDateString()}</td>
+                <td>{formatAdminDateTime(p.created_at)}</td>
                 <td className="actions-col">
                   <div className="actions-inline">
                   <button
@@ -122,16 +123,9 @@ export default function AdminPropertiesPage() {
                   >
                     Delete
                   </button>
-                  <a
-                    href={`https://www.ddmverify.com`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="btn btn-neutral"
-                    title={`Property ID: ${p.id}`}
-                  >
-                    <ExternalLink size={13} />
+                  <Link href={`/admin/properties/${p.id}`} className="btn btn-neutral" title={`Open admin detail for ${p.title}`}>
                     View
-                  </a>
+                  </Link>
                   </div>
                 </td>
               </tr>

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiPatch, apiPost } from '@/lib/api';
+import { formatAdminDateTime } from '@/lib/format-datetime';
 import { getAccessToken, useAdminQuery } from '@/lib/use-admin-query';
 
 type Agent = {
@@ -116,7 +117,7 @@ export default function AdminAgentsPage() {
                     {!a.verification_document_url && !a.business_license_url ? '—' : null}
                   </div>
                 </td>
-                <td>{new Date(a.created_at).toLocaleDateString()}</td>
+                <td>{formatAdminDateTime(a.created_at)}</td>
                 <td className="actions-col">
                   <div className="actions-inline">
                   <button type="button" className={`btn ${a.verified ? 'btn-danger' : 'btn-success'}`} onClick={() => toggleMutation.mutate(a)}>

@@ -15,13 +15,16 @@ export function useAdminQuery<T>({
   key,
   path,
   fallback,
+  enabled = true,
 }: {
   key: string[];
   path: string;
   fallback?: T;
+  enabled?: boolean;
 }) {
   return useQuery({
     queryKey: key,
+    enabled,
     queryFn: async () => {
       const token = await getAccessToken();
       if (!token) throw new Error('No active session.');
