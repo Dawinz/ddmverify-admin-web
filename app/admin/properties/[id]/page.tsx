@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ExternalLink } from 'lucide-react';
+import { useState } from 'react';
+import { ExternalLink, ImageOff } from 'lucide-react';
 import { useAdminQuery } from '@/lib/use-admin-query';
 import { formatAdminDateTime } from '@/lib/format-datetime';
 
@@ -15,6 +16,38 @@ function str(v: unknown): string {
   if (v === null || v === undefined) return '—';
   const s = String(v).trim();
   return s.length ? s : '—';
+}
+
+function PropertyGalleryImage({ url, index }: { url: string; index: number }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return (
+      <div className="property-detail-images__broken" role="img" aria-label={`Image ${index + 1} failed to load`}>
+        <ImageOff size={28} strokeWidth={1.5} aria-hidden />
+        <span>Could not load image</span>
+        <a href={url} target="_blank" rel="noreferrer" className="link-sm">
+          Open URL
+        </a>
+      </div>
+    );
+  }
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      className="property-detail-images__link"
+      title="Open full size in new tab"
+    >
+      <img
+        src={url}
+        alt={`Property photo ${index + 1}`}
+        loading={index < 4 ? 'eager' : 'lazy'}
+        decoding="async"
+        onError={() => setFailed(true)}
+      />
+    </a>
+  );
 }
 
 export default function AdminPropertyDetailPage() {
@@ -94,18 +127,31 @@ export default function AdminPropertyDetailPage() {
       </div>
 
       {images.length > 0 && (
-        <div className="panel" style={{ marginBottom: 16 }}>
-          <h2 style={{ marginTop: 0, fontSize: '1.1rem' }}>Images</h2>
-          <ul style={{ margin: 0, paddingLeft: 18 }}>
+        <div className="panel property-detail-images" style={{ marginBottom: 16 }}>
+          <div className="property-detail-images__head">
+            <h2 style={{ margin: 0, fontSize: '1.1rem' }}>Images</h2>
+            <span className="property-detail-images__count">{images.length} photo{images.length === 1 ? '' : 's'}</span>
+          </div>
+          <div className="property-detail-images__grid">
             {images.map((im, i) => (
-              <li key={`${im.image_url}-${i}`} style={{ marginBottom: 8 }}>
-                <a href={im.image_url} target="_blank" rel="noreferrer">
-                  {im.image_url}
-                  <ExternalLink size={12} style={{ marginLeft: 6, verticalAlign: 'middle' }} />
-                </a>
-              </li>
+              <figure key={im.id || `${im.image_url}-${i}`} className="property-detail-images__figure">
+                <PropertyGalleryImage url={im.image_url} index={i} />
+                <figcaption className="property-detail-images__caption">
+                  <span>Photo {i + 1}</span>
+                  <a
+                    href={im.image_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="property-detail-images__open"
+                    title="Open original in new tab"
+                  >
+                    <ExternalLink size={15} strokeWidth={2} aria-hidden />
+                    <span className="property-detail-images__open-label">Open</span>
+                  </a>
+                </figcaption>
+              </figure>
             ))}
-          </ul>
+          </div>
         </div>
       )}
     </div>
