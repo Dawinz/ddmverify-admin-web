@@ -315,7 +315,7 @@ input[type="number"] {
   align-self: center;
   width: 34px;
   height: 34px;
-  margin-bottom: 8px;
+  margin-top: 2px;
   border-radius: 10px;
   border: 1px solid rgba(148, 163, 184, 0.28);
   background: rgba(15, 23, 42, 0.55);
@@ -440,6 +440,12 @@ input[type="number"] {
 
 .admin-app.rail-expanded .rail-footer {
   align-items: stretch;
+}
+
+.admin-app.rail-expanded .rail-expand-toggle {
+  align-self: stretch;
+  width: 100%;
+  min-height: 36px;
 }
 
 .rail-add {

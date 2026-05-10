@@ -126,16 +126,6 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   return (
     <div className={`admin-app${railExpanded ? ' rail-expanded' : ''}`}>
       <aside className="admin-rail" aria-label="Primary navigation">
-        <button
-          type="button"
-          className="rail-expand-toggle"
-          onClick={toggleRail}
-          aria-expanded={railExpanded}
-          aria-label={railExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
-        >
-          {railExpanded ? <ChevronLeft size={18} strokeWidth={2} /> : <ChevronRight size={18} strokeWidth={2} />}
-        </button>
-
         <div className="rail-brand">
           <Link href="/admin" className="rail-brand-link" title="DDM Verify Admin home">
             <img src="/ddm-logo-mark.svg" alt="DDM Verify" className="rail-logo" width={34} height={34} />
@@ -162,6 +152,15 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <Plus size={17} strokeWidth={2} />
             {railExpanded && <span className="rail-label">Payments</span>}
           </Link>
+          <button
+            type="button"
+            className="rail-expand-toggle"
+            onClick={toggleRail}
+            aria-expanded={railExpanded}
+            aria-label={railExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
+          >
+            {railExpanded ? <ChevronLeft size={18} strokeWidth={2} /> : <ChevronRight size={18} strokeWidth={2} />}
+          </button>
         </div>
       </aside>
 
