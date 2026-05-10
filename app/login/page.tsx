@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
 export default function LoginPage() {
@@ -10,7 +9,6 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<'login' | 'register'>('login');
-  const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -93,8 +91,9 @@ export default function LoginPage() {
         setError('Access denied. Admin role required.');
         return;
       }
-      router.push('/admin');
-      router.refresh();
+      // Full navigation avoids App Router soft-fetch of the RSC payload (`/_next/...`), which can
+      // throw NetworkError when extensions or privacy tools block `fetch` / chunk scripts.
+      window.location.assign('/admin');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
