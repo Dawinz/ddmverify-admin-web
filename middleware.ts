@@ -1,25 +1,16 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
-function hasSupabaseTokenCookie(req: NextRequest): boolean {
-  return req.cookies
-    .getAll()
-    .some((c) => c.name.includes('auth-token') || c.name === 'sb-access-token' || c.name === 'sb-refresh-token');
-}
-
-export function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
-  if (!pathname.startsWith('/admin')) return NextResponse.next();
-  if (pathname === '/admin/login') return NextResponse.next();
-
-  // Defense-in-depth: if no auth-like cookie exists, bounce to /login quickly.
-  // Client-side guard in Admin layout performs authoritative Supabase session check.
-  if (!hasSupabaseTokenCookie(req)) {
-    const url = req.nextUrl.clone();
-    url.pathname = '/login';
-    url.searchParams.set('next', pathname);
-    return NextResponse.redirect(url);
-  }
+/**
+ * The browser Supabase client (`@supabase/supabase-js`) persists sessions in **localStorage**
+ * by default. Edge middleware cannot read localStorage, so cookie-based checks here always
+ * looked “logged out” and redirected `/admin` → `/login` after a successful sign-in
+ * (full-page navigation includes no session cookie).
+ *
+ * Enforcement: `AdminRouteGuard` (client, reads Supabase session) + API `Authorization`
+ * checks on admin actions.
+ */
+export function middleware(_req: NextRequest) {
   return NextResponse.next();
 }
 
