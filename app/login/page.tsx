@@ -12,13 +12,34 @@ export default function LoginPage() {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const router = useRouter();
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
+      // Read from the form so browser autofill is included (controlled state often stays
+      // empty until React sees an input event — Supabase then gets "missing email or phone").
+      const form = e.currentTarget;
+      const fd = new FormData(form);
+      const emailFromDom = String(fd.get('email') ?? '').trim();
+      const passwordFromDom = String(fd.get('password') ?? '');
+      const effectiveEmail = emailFromDom || email.trim();
+      const effectivePassword = passwordFromDom || password;
+
+      if (!effectiveEmail) {
+        setError('Enter your email address.');
+        return;
+      }
+      if (!effectivePassword) {
+        setError('Enter your password.');
+        return;
+      }
+
       if (mode === 'register') {
-        const { error: signUpError } = await supabase.auth.signUp({ email, password });
+        const { error: signUpError } = await supabase.auth.signUp({
+          email: effectiveEmail,
+          password: effectivePassword,
+        });
         if (signUpError) {
           setError(signUpError.message);
           return;
@@ -27,7 +48,10 @@ export default function LoginPage() {
         return;
       }
 
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email: effectiveEmail,
+        password: effectivePassword,
+      });
       if (signInError) {
         setError(signInError.message);
         return;
@@ -101,6 +125,7 @@ export default function LoginPage() {
           <div style={{ marginBottom: 16 }}>
             <label style={{ display: 'block', marginBottom: 6, fontSize: 14 }}>Email</label>
             <input
+              name="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -111,6 +136,7 @@ export default function LoginPage() {
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: 'block', marginBottom: 6, fontSize: 14 }}>Password</label>
             <input
+              name="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
