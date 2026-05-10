@@ -118,7 +118,7 @@ export default function AdminDashboard() {
                   <DeltaBadge k={k} />
                 </div>
                 <div className="kpi-icon-wrap" aria-hidden>
-                  <Icon size={26} />
+                  <Icon size={18} strokeWidth={2} />
                 </div>
               </div>
             </div>

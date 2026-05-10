@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 
-// Serves the same SVG the old `app/icon.tsx` returned, as a real Response.
-// Needed because `app/icon.tsx` + Next 14.2 metadata prerender fails on some Windows paths.
+// Lightweight favicon for the browser tab — keep this tiny (do not point metadata at the
+// full marketing logo SVG in /public, which can be large). Needed because `app/icon.tsx` +
+// Next 14.2 metadata prerender fails on some Windows paths.
 const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
   <rect x="4" y="4" width="56" height="56" rx="16" fill="url(#g)"/>

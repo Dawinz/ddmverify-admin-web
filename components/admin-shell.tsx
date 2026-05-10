@@ -54,7 +54,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       <aside className="admin-rail" aria-label="Primary navigation">
         <div className="rail-brand">
           <Link href="/admin" title="DDM Verify Admin home">
-            <img src="/ddm-icon.png" alt="DDM Verify" width={40} height={40} className="rail-logo" />
+            <img src="/ddm-logo-mark.svg" alt="DDM Verify" className="rail-logo" width={34} height={34} />
           </Link>
         </div>
         <nav className="rail-nav">
@@ -65,16 +65,16 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               title={label}
               className={`rail-link${pathname === href ? ' active' : ''}`}
             >
-              <Icon size={22} strokeWidth={1.75} />
+              <Icon size={17} strokeWidth={2} />
             </Link>
           ))}
         </nav>
         <div className="rail-footer">
           <Link href="/admin/payment-methods" className="rail-add" title="Payment controls">
-            <Plus size={22} />
+            <Plus size={17} strokeWidth={2} />
           </Link>
           <button type="button" className="rail-logout" title="Sign out" onClick={() => void handleLogout()}>
-            <LogOut size={20} />
+            <LogOut size={17} strokeWidth={2} />
           </button>
         </div>
       </aside>
@@ -87,7 +87,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </div>
           <div className="topbar-right">
             <Link href="/admin/notifications" className="topbar-bell" title="Notifications">
-              <Bell size={22} />
+              <Bell size={18} strokeWidth={2} />
             </Link>
             <div className="topbar-user">
               <div className="topbar-avatar" aria-hidden>
