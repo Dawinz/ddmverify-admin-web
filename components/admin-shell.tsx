@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import { Bell, ChevronLeft, ChevronRight, LogOut, Plus } from 'lucide-react';
+import { Bell, ChevronLeft, ChevronRight, CreditCard, LogOut } from 'lucide-react';
 
 import { adminNav } from '@/lib/admin-nav';
 import { apiGet } from '@/lib/api';
@@ -148,10 +148,6 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="rail-footer">
-          <Link href="/admin/payment-methods" className="rail-add" title="Payment controls">
-            <Plus size={17} strokeWidth={2} />
-            {railExpanded && <span className="rail-label">Payments</span>}
-          </Link>
           <button
             type="button"
             className="rail-expand-toggle"
@@ -172,6 +168,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <span className="topbar-accent-line" aria-hidden />
           </div>
           <div className="topbar-right">
+            <Link
+              href="/admin/payment-methods"
+              className={`topbar-tool${pathname.startsWith('/admin/payment-methods') ? ' active' : ''}`}
+              title="Payment controls"
+              aria-current={pathname.startsWith('/admin/payment-methods') ? 'page' : undefined}
+            >
+              <CreditCard size={18} strokeWidth={2} aria-hidden />
+            </Link>
             <Link href="/admin/notifications" className="topbar-bell" title="Notifications">
               <Bell size={18} strokeWidth={2} />
             </Link>

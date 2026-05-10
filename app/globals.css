@@ -448,33 +448,6 @@ input[type="number"] {
   min-height: 36px;
 }
 
-.rail-add {
-  width: 32px;
-  height: 32px;
-  border-radius: 9px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: linear-gradient(135deg, var(--ddm-accent-deep), var(--ddm-accent));
-  color: #fff;
-  text-decoration: none;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.admin-app.rail-expanded .rail-add {
-  width: 100%;
-  height: auto;
-  min-height: 36px;
-  justify-content: flex-start;
-  padding: 8px 12px;
-}
-
-.admin-app.rail-expanded .rail-add .rail-label {
-  color: rgba(255, 255, 255, 0.96);
-}
-
 .admin-frame {
   display: flex;
   flex-direction: column;
@@ -531,8 +504,30 @@ input[type="number"] {
 .topbar-right {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 8px;
   flex-shrink: 0;
+}
+
+.topbar-tool {
+  color: #475569;
+  padding: 10px;
+  border-radius: 12px;
+  margin-top: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.topbar-tool:hover {
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--ddm-accent-deep);
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+}
+
+.topbar-tool.active {
+  color: var(--ddm-accent-deep);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 2px 10px rgba(46, 143, 217, 0.12);
 }
 
 .topbar-bell {
