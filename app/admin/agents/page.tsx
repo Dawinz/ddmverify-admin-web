@@ -12,6 +12,7 @@ type Agent = {
   verified: boolean;
   verification_badge_status?: string | null;
   verification_document_url?: string | null;
+  business_license_url?: string | null;
   created_at: string;
   email: string;
   full_name: string | null;
@@ -88,7 +89,7 @@ export default function AdminAgentsPage() {
               <th>Agency</th>
               <th>Verified</th>
               <th>Badge Status</th>
-              <th>Document</th>
+              <th>Documents</th>
               <th>Created</th>
               <th className="actions-col">Actions</th>
             </tr>
@@ -101,11 +102,19 @@ export default function AdminAgentsPage() {
                 <td>{a.verified ? 'Yes' : 'No'}</td>
                 <td>{a.verification_badge_status ?? 'unverified'}</td>
                 <td>
-                  {a.verification_document_url ? (
-                    <a href={a.verification_document_url} target="_blank" rel="noreferrer">Open</a>
-                  ) : (
-                    '—'
-                  )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {a.verification_document_url ? (
+                      <a href={a.verification_document_url} target="_blank" rel="noreferrer">
+                        ID / passport
+                      </a>
+                    ) : null}
+                    {a.business_license_url ? (
+                      <a href={a.business_license_url} target="_blank" rel="noreferrer">
+                        Business license
+                      </a>
+                    ) : null}
+                    {!a.verification_document_url && !a.business_license_url ? '—' : null}
+                  </div>
                 </td>
                 <td>{new Date(a.created_at).toLocaleDateString()}</td>
                 <td className="actions-col">
