@@ -1,36 +1,5 @@
-'use client';
-
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { adminNav } from '@/lib/admin-nav';
+import { AdminShell } from '@/components/admin-shell';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-
-  return (
-    <div className="admin-shell">
-      <aside className="admin-sidebar">
-        <div className="brand-row">
-          <img src="/icon" alt="DDM Verify" className="brand-logo-img" />
-          <div className="brand-title">
-            <strong>DDM Verify</strong>
-            <span>Admin Control Center</span>
-          </div>
-        </div>
-        <nav className="side-nav">
-          {adminNav.map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className={`side-link${pathname === href ? ' active' : ''}`}
-            >
-              <Icon size={17} />
-              {label}
-            </Link>
-          ))}
-        </nav>
-      </aside>
-      <main className="admin-main">{children}</main>
-    </div>
-  );
+  return <AdminShell>{children}</AdminShell>;
 }

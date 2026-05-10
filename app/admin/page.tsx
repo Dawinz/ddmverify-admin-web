@@ -1,113 +1,242 @@
 'use client';
 
 import Link from 'next/link';
-import { Home, Power, ShieldCheck } from 'lucide-react';
+import {
+  Building2,
+  CalendarDays,
+  Home,
+  MessageCircle,
+  Percent,
+  Users,
+} from 'lucide-react';
+
+import { DashboardChart } from '@/components/dashboard-chart';
 import { useAdminQuery } from '@/lib/use-admin-query';
 
-type Stats = {
-  users: number;
-  agents: number;
-  properties: number;
-  pending: number;
-  viewings: number;
-  proofs: number;
-  deals: number;
-  paymentMethods: number;
+type Kpi = {
+  id: string;
+  label: string;
+  value: number | string;
+  deltaPct: number | null;
+  deltaLabel: string;
+  accent: string;
 };
 
-export default function AdminDashboard() {
-  const statsQ = useAdminQuery<{ stats: Stats }>({
-    key: ['admin', 'stats'],
-    path: '/admin/stats',
-  });
-  const paymentOptionsQ = useAdminQuery<{
-    payment_options?: { enabled: boolean; total_methods: number; enabled_methods: number };
-  }>({
-    key: ['admin', 'payment-options'],
-    path: '/admin/payment-options',
-    fallback: { payment_options: { enabled: false, total_methods: 0, enabled_methods: 0 } },
-  });
-  const stats = statsQ.data?.stats ?? {
-    users: 0,
-    agents: 0,
-    properties: 0,
-    pending: 0,
-    viewings: 0,
-    proofs: 0,
-    deals: 0,
-    paymentMethods: 0,
-  };
-  if (statsQ.isLoading) return <p className="muted">Loading dashboard...</p>;
-  const paymentOptions = paymentOptionsQ.data?.payment_options ?? {
-    enabled: false,
-    total_methods: 0,
-    enabled_methods: 0,
-  };
+type AgentRow = {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  verified: boolean;
+  agency_name: string | null;
+  listings: string;
+  activity_at: string;
+};
 
-  const cards = [
-    { label: 'Users', value: stats.users, href: '/admin/users' },
-    { label: 'Agents', value: stats.agents, href: '/admin/agents' },
-    { label: 'Properties', value: stats.properties, href: '/admin/properties' },
-    { label: 'Viewing schedules', value: stats.viewings, href: '/admin/bookings' },
-    { label: 'Deals', value: stats.deals, href: '/admin/deals' },
-    { label: 'Payment methods', value: stats.paymentMethods, href: '/admin/payment-methods' },
-    { label: 'Payment proofs', value: stats.proofs, href: '/admin/payment-proofs' },
-    { label: 'Pending verification', value: stats.pending, href: '/admin/verification' },
-  ];
+type DashboardPayload = {
+  kpis: Kpi[];
+  agent_activity: AgentRow[];
+  chart: {
+    labels: string[];
+    new_listings_by_day: number[];
+    verified_by_day: number[];
+  };
+  insights: { severity: 'critical' | 'warning' | 'info' | 'positive'; message: string }[];
+  notifications_24h?: number;
+  totals?: { pending_verification: number; properties: number; verified_properties: number };
+};
+
+const kpiIcons: Record<string, typeof Building2> = {
+  listings: Building2,
+  bookings: CalendarDays,
+  threads: Home,
+  messages: MessageCircle,
+  verification: Percent,
+  signups: Users,
+};
+
+function formatKpiValue(k: Kpi): string {
+  if (typeof k.value === 'number') return String(k.value);
+  return k.value ?? '—';
+}
+
+function DeltaBadge({ k }: { k: Kpi }) {
+  if (k.deltaPct == null) {
+    return <span className="kpi-delta muted">{k.deltaLabel}</span>;
+  }
+  const up = k.deltaPct > 0;
+  const flat = k.deltaPct === 0;
+  return (
+    <span className={`kpi-delta${flat ? ' flat' : up ? ' up' : ' down'}`}>
+      {flat ? 'Flat' : `${up ? '+' : ''}${k.deltaPct}%`} {k.deltaLabel}
+    </span>
+  );
+}
+
+export default function AdminDashboard() {
+  const dashQ = useAdminQuery<DashboardPayload>({
+    key: ['admin', 'dashboard'],
+    path: '/admin/dashboard',
+  });
+
+  if (dashQ.isLoading) {
+    return (
+      <div className="dashboard-loading">
+        <p className="muted">Loading operations dashboard…</p>
+      </div>
+    );
+  }
+
+  if (dashQ.error) {
+    return (
+      <p style={{ color: '#dc2626' }}>{(dashQ.error as Error).message}</p>
+    );
+  }
+
+  const data = dashQ.data!;
+  const kpis = data.kpis ?? [];
+  const agents = data.agent_activity ?? [];
+  const chart = data.chart;
 
   return (
-    <div>
-      <h1 className="page-title">Dashboard</h1>
-      <p className="muted" style={{ marginTop: -8, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
-        <ShieldCheck size={16} />
-        DDM Verify admin overview with cached live data.
-      </p>
-      {statsQ.error && <p style={{ color: '#dc2626', marginBottom: 16 }}>{(statsQ.error as Error).message}</p>}
-      {paymentOptionsQ.error && <p style={{ color: '#dc2626', marginBottom: 16 }}>{(paymentOptionsQ.error as Error).message}</p>}
-      <Link
-        href="/admin/payment-methods"
-        className="panel"
-        style={{
-          padding: 20,
-          display: 'block',
-          marginBottom: 16,
-          borderColor: paymentOptions.enabled ? '#16a34a40' : '#dc262640',
-          background: paymentOptions.enabled ? '#f0fdf4' : '#fef2f2',
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <div>
-            <div style={{ fontSize: 14, color: '#475569', fontWeight: 600 }}>Payments Control</div>
-            <div style={{ fontSize: 24, fontWeight: 800, marginTop: 2, color: paymentOptions.enabled ? '#15803d' : '#b91c1c' }}>
-              {paymentOptions.enabled ? 'ON' : 'OFF'}
+    <div className="dashboard-page">
+      <div className="dashboard-hero">
+        <h1 className="dashboard-h1">Overview</h1>
+        <p className="dashboard-sub muted">
+          Live metrics from Railway Postgres — listings, bookings, messaging, and verification.
+        </p>
+      </div>
+
+      <section className="kpi-grid" aria-label="Key metrics">
+        {kpis.map((k) => {
+          const Icon = kpiIcons[k.id] ?? Building2;
+          return (
+            <div key={k.id} className={`kpi-card accent-${k.accent}`}>
+              <div className="kpi-card-top">
+                <div>
+                  <div className="kpi-label">{k.label}</div>
+                  <div className="kpi-value">{formatKpiValue(k)}</div>
+                  <DeltaBadge k={k} />
+                </div>
+                <div className="kpi-icon-wrap" aria-hidden>
+                  <Icon size={26} />
+                </div>
+              </div>
             </div>
-            <div className="muted" style={{ marginTop: 6 }}>
-              {paymentOptions.enabled_methods}/{paymentOptions.total_methods} methods enabled
-            </div>
-          </div>
-          <div className="muted" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Power size={16} />
-            Open payment controls
+          );
+        })}
+      </section>
+
+      <section className="dashboard-panel agent-panel">
+        <div className="panel-head">
+          <h2>Agent activity</h2>
+          <div className="panel-head-actions">
+            <Link href="/admin/agents" className="btn btn-neutral btn-sm">
+              View all
+            </Link>
           </div>
         </div>
-      </Link>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16 }}>
-        {cards.map(({ label, value, href }) => (
-          <Link
-            key={href}
-            href={href}
-            className="panel"
-            style={{ padding: 20, display: 'block', transition: 'transform 120ms ease' }}
-          >
-            <div style={{ fontSize: 14, color: '#64748b' }}>{label}</div>
-            <div style={{ fontSize: 30, fontWeight: 800, marginTop: 4, color: '#1d6db9' }}>{value}</div>
-            <div className="muted" style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Home size={14} />
-              Open section
-            </div>
-          </Link>
-        ))}
+        <div className="table-scroll">
+          <table className="dashboard-table">
+            <thead>
+              <tr>
+                <th>Agent</th>
+                <th>Status</th>
+                <th>Focus</th>
+                <th>Listings</th>
+                <th>Last activity</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {agents.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="td-empty">
+                    No agents yet.
+                  </td>
+                </tr>
+              )}
+              {agents.map((a) => (
+                <tr key={a.id}>
+                  <td>
+                    <div className="agent-cell">
+                      <div className="agent-avatar">{(a.full_name ?? a.email ?? '?').slice(0, 1).toUpperCase()}</div>
+                      <div>
+                        <div className="agent-name">{a.full_name?.trim() || '—'}</div>
+                        <div className="agent-email muted">{a.email ?? '—'}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span className={`pill ${a.verified ? 'pill-success' : 'pill-warn'}`}>
+                      {a.verified ? 'Verified' : 'Pending'}
+                    </span>
+                  </td>
+                  <td>Listings</td>
+                  <td>{a.listings}</td>
+                  <td className="muted td-nowrap">
+                    {a.activity_at ? new Date(a.activity_at).toLocaleString() : '—'}
+                  </td>
+                  <td>
+                    <Link href="/admin/agents" className="link-muted">
+                      Open
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div className="dashboard-split">
+        <section className="dashboard-panel chart-panel">
+          <div className="panel-head">
+            <h2>New listings & verified (7 days)</h2>
+          </div>
+          {chart.labels.length > 0 ? (
+            <DashboardChart
+              labels={chart.labels}
+              seriesA={chart.new_listings_by_day}
+              seriesB={chart.verified_by_day}
+              labelA="New listings / day"
+              labelB="Moved to verified / day"
+            />
+          ) : (
+            <p className="muted">No chart data.</p>
+          )}
+        </section>
+
+        <section className="dashboard-panel insights-panel">
+          <div className="panel-head">
+            <h2>Alerts & insights</h2>
+            <Link href="/admin/verification" className="link-sm">
+              Review queue
+            </Link>
+          </div>
+          <ul className="insights-list">
+            {(data.insights ?? []).map((ins, i) => (
+              <li key={i} className={`insight insight-${ins.severity}`}>
+                {ins.message}
+              </li>
+            ))}
+          </ul>
+          {typeof data.notifications_24h === 'number' && (
+            <p className="muted foot-note">{data.notifications_24h} in-app notifications (24h).</p>
+          )}
+        </section>
       </div>
+
+      <section className="dashboard-quick panel">
+        <h3 className="quick-title">Shortcuts</h3>
+        <div className="quick-links">
+          <Link href="/admin/users">Users</Link>
+          <Link href="/admin/properties">Properties</Link>
+          <Link href="/admin/verification">Verification</Link>
+          <Link href="/admin/bookings">Bookings</Link>
+          <Link href="/admin/deals">Deals</Link>
+          <Link href="/admin/payment-methods">Payments</Link>
+        </div>
+      </section>
     </div>
   );
 }
