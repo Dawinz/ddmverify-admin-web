@@ -286,10 +286,15 @@ input[type="number"] {
 
 /* —— Operations shell (DDM Verify branding) —— */
 .admin-app {
+  --rail-w: 56px;
   display: grid;
-  grid-template-columns: 56px 1fr;
+  grid-template-columns: var(--rail-w) 1fr;
   min-height: 100vh;
   background: var(--ddm-canvas);
+}
+
+.admin-app.rail-expanded {
+  --rail-w: 222px;
 }
 
 .admin-rail {
@@ -299,17 +304,61 @@ input[type="number"] {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 10px 0 14px;
+  align-items: stretch;
+  padding: 8px 8px 14px;
   background: linear-gradient(180deg, #0b1224 0%, #0f172a 55%, #111827 100%);
   border-right: 1px solid #1e293b;
 }
 
+.rail-expand-toggle {
+  flex-shrink: 0;
+  align-self: center;
+  width: 34px;
+  height: 34px;
+  margin-bottom: 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(15, 23, 42, 0.55);
+  color: #cbd5e1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.rail-expand-toggle:hover {
+  color: #fff;
+  background: rgba(46, 143, 217, 0.22);
+  border-color: rgba(46, 143, 217, 0.45);
+}
+
 .rail-brand {
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   width: 100%;
+}
+
+.rail-brand-link {
   display: flex;
+  align-items: center;
   justify-content: center;
+  gap: 10px;
+  min-width: 0;
+  color: inherit;
+}
+
+.admin-app.rail-expanded .rail-brand-link {
+  justify-content: flex-start;
+  padding: 0 6px;
+}
+
+.rail-brand-text {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .rail-logo {
@@ -321,25 +370,51 @@ input[type="number"] {
   border-radius: 0;
   box-shadow: none;
   background: transparent;
+  flex-shrink: 0;
 }
 
 .rail-nav {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
   flex: 1;
   width: 100%;
   align-items: center;
+  min-height: 0;
+}
+
+.admin-app.rail-expanded .rail-nav {
+  align-items: stretch;
 }
 
 .rail-link {
   width: 34px;
   height: 34px;
   border-radius: 10px;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   color: #94a3b8;
   transition: background 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.admin-app.rail-expanded .rail-link {
+  width: 100%;
+  height: auto;
+  min-height: 36px;
+  justify-content: flex-start;
+  padding: 8px 10px;
+}
+
+.rail-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .rail-link:hover {
@@ -356,38 +431,42 @@ input[type="number"] {
 .rail-footer {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 8px;
   align-items: center;
   padding-top: 10px;
   border-top: 1px solid rgba(148, 163, 184, 0.2);
   width: 100%;
 }
 
+.admin-app.rail-expanded .rail-footer {
+  align-items: stretch;
+}
+
 .rail-add {
   width: 32px;
   height: 32px;
   border-radius: 9px;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   background: linear-gradient(135deg, var(--ddm-accent-deep), var(--ddm-accent));
   color: #fff;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
 }
 
-.rail-logout {
-  width: 32px;
-  height: 32px;
-  border-radius: 9px;
-  border: none;
-  cursor: pointer;
-  background: transparent;
-  color: #94a3b8;
-  display: grid;
-  place-items: center;
+.admin-app.rail-expanded .rail-add {
+  width: 100%;
+  height: auto;
+  min-height: 36px;
+  justify-content: flex-start;
+  padding: 8px 12px;
 }
 
-.rail-logout:hover {
-  color: #fecaca;
-  background: rgba(220, 38, 38, 0.15);
+.admin-app.rail-expanded .rail-add .rail-label {
+  color: rgba(255, 255, 255, 0.96);
 }
 
 .admin-frame {
@@ -399,56 +478,95 @@ input[type="number"] {
 
 .admin-topbar {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
-  padding: 14px 24px;
-  background: #fff;
-  border-bottom: 1px solid var(--ddm-border);
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+  gap: 20px;
+  padding: 18px 26px 20px;
+  background: linear-gradient(165deg, #ffffff 0%, #f4f9ff 38%, #eef8ff 72%, #f5fafb 100%);
+  border-bottom: 1px solid rgba(59, 130, 246, 0.14);
+  box-shadow:
+    0 10px 28px rgba(15, 23, 42, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
 }
 
 .topbar-left {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 6px;
+  align-items: flex-start;
+  min-width: 0;
 }
 
 .topbar-eyebrow {
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: var(--ddm-muted);
+  color: #64748b;
 }
 
 .topbar-title {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
   color: #0f172a;
+}
+
+.topbar-accent-line {
+  display: block;
+  width: min(180px, 42vw);
+  height: 4px;
+  margin-top: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--ddm-accent-deep), var(--ddm-accent), var(--ddm-teal));
 }
 
 .topbar-right {
   display: flex;
-  align-items: center;
-  gap: 18px;
+  align-items: flex-start;
+  gap: 12px;
+  flex-shrink: 0;
 }
 
 .topbar-bell {
   color: #475569;
-  padding: 8px;
-  border-radius: 10px;
+  padding: 10px;
+  border-radius: 12px;
+  margin-top: 2px;
 }
 
 .topbar-bell:hover {
-  background: #f1f5f9;
+  background: rgba(255, 255, 255, 0.85);
   color: var(--ddm-accent-deep);
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
 }
 
-.topbar-user {
+.topbar-user-menu {
+  position: relative;
+  margin-top: 2px;
+}
+
+.topbar-user-trigger {
   display: flex;
   align-items: center;
   gap: 10px;
+  padding: 6px 10px 6px 6px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+.topbar-user-trigger:hover {
+  border-color: rgba(46, 143, 217, 0.45);
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
 }
 
 .topbar-avatar {
@@ -461,12 +579,14 @@ input[type="number"] {
   display: grid;
   place-items: center;
   font-size: 15px;
+  flex-shrink: 0;
 }
 
 .topbar-user-text {
   display: flex;
   flex-direction: column;
   line-height: 1.2;
+  text-align: left;
 }
 
 .topbar-name {
@@ -480,6 +600,47 @@ input[type="number"] {
   color: var(--ddm-muted);
 }
 
+.topbar-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  min-width: 200px;
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid var(--ddm-border);
+  background: #fff;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14);
+  z-index: 60;
+}
+
+.topbar-dropdown-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  text-align: left;
+}
+
+.topbar-dropdown-item:hover {
+  background: #f8fafc;
+}
+
+.topbar-dropdown-item.danger {
+  color: #b91c1c;
+}
+
+.topbar-dropdown-item.danger:hover {
+  background: #fef2f2;
+}
+
 .admin-app .admin-main {
   flex: 1;
   padding: 22px 26px 36px;
@@ -488,6 +649,27 @@ input[type="number"] {
 .dashboard-page {
   max-width: 1400px;
   margin: 0 auto;
+}
+
+.dashboard-hero {
+  padding: 22px 24px;
+  margin-bottom: 22px;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #ffffff 0%, #eff6ff 42%, #ecfdf9 100%);
+  border: 1px solid rgba(148, 163, 184, 0.38);
+  box-shadow:
+    0 8px 26px rgba(15, 23, 42, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92);
+}
+
+.dashboard-hero .dashboard-h1 {
+  font-size: 26px;
+}
+
+.dashboard-hero .dashboard-sub {
+  margin: 10px 0 0;
+  max-width: 52rem;
+  line-height: 1.45;
 }
 
 .dashboard-h1 {
@@ -826,8 +1008,8 @@ input[type="number"] {
     grid-template-columns: 1fr;
   }
 
-  .admin-app {
-    grid-template-columns: 52px 1fr;
+  .admin-app:not(.rail-expanded) {
+    --rail-w: 52px;
   }
 }
 

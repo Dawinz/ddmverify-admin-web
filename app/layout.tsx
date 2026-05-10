@@ -9,9 +9,9 @@ export const metadata: Metadata = {
   },
   description: 'Admin dashboard for DDM Verify',
   icons: {
-    icon: [{ url: '/icon', type: 'image/svg+xml' }],
-    shortcut: '/icon',
-    apple: '/icon',
+    icon: [{ url: '/icon.png', type: 'image/png', sizes: 'any' }],
+    shortcut: '/icon.png',
+    apple: [{ url: '/apple-icon.png', type: 'image/png', sizes: '180x180' }],
   },
 };
 
