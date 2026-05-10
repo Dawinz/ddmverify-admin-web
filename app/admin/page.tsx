@@ -99,13 +99,6 @@ export default function AdminDashboard() {
 
   return (
     <div className="dashboard-page">
-      <div className="dashboard-hero">
-        <h1 className="dashboard-h1">Overview</h1>
-        <p className="dashboard-sub muted">
-          Live metrics from Railway Postgres — listings, bookings, messaging, and verification.
-        </p>
-      </div>
-
       <section className="kpi-grid" aria-label="Key metrics">
         {kpis.map((k) => {
           const Icon = kpiIcons[k.id] ?? Building2;
