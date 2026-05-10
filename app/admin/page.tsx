@@ -3,11 +3,11 @@
 import Link from 'next/link';
 import {
   Building2,
-  CalendarDays,
-  Home,
-  MessageCircle,
-  Percent,
-  Users,
+  CalendarClock,
+  Inbox,
+  Mail,
+  ShieldCheck,
+  UserPlus,
 } from 'lucide-react';
 
 import { DashboardChart } from '@/components/dashboard-chart';
@@ -47,11 +47,11 @@ type DashboardPayload = {
 
 const kpiIcons: Record<string, typeof Building2> = {
   listings: Building2,
-  bookings: CalendarDays,
-  threads: Home,
-  messages: MessageCircle,
-  verification: Percent,
-  signups: Users,
+  bookings: CalendarClock,
+  threads: Inbox,
+  messages: Mail,
+  verification: ShieldCheck,
+  signups: UserPlus,
 };
 
 function formatKpiValue(k: Kpi): string {
@@ -118,7 +118,7 @@ export default function AdminDashboard() {
                   <DeltaBadge k={k} />
                 </div>
                 <div className="kpi-icon-wrap" aria-hidden>
-                  <Icon size={18} strokeWidth={2} />
+                  <Icon size={17} strokeWidth={1.75} />
                 </div>
               </div>
             </div>

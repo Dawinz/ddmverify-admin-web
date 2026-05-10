@@ -1,19 +1,21 @@
 import { NextResponse } from "next/server";
 
-// Lightweight favicon for the browser tab — keep this tiny (do not point metadata at the
-// full marketing logo SVG in /public, which can be large). Needed because `app/icon.tsx` +
-// Next 14.2 metadata prerender fails on some Windows paths.
+// Lightweight favicon (~1 KB): brand gradient orb (matches DDM palette). Do not point
+// metadata at /public/ddm-logo-mark.svg — it embeds a huge raster. Needed because
+// `app/icon.tsx` + Next 14.2 metadata prerender fails on some Windows paths.
 const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
-  <rect x="4" y="4" width="56" height="56" rx="16" fill="url(#g)"/>
-  <path d="M20 18h11.5c8.56 0 14.5 5.6 14.5 14S40.06 46 31.5 46H20V18Zm9.7 21.2c4.97 0 8.22-2.98 8.22-7.2 0-4.2-3.25-7.2-8.22-7.2h-2.3v14.4h2.3Z" fill="white"/>
   <defs>
-    <linearGradient id="g" x1="4" y1="4" x2="60" y2="60" gradientUnits="userSpaceOnUse">
+    <linearGradient id="g" x1="10" y1="8" x2="54" y2="56" gradientUnits="userSpaceOnUse">
       <stop stop-color="#1D6DB9"/>
-      <stop offset="0.55" stop-color="#2E8FD9"/>
+      <stop offset="0.5" stop-color="#2E8FD9"/>
       <stop offset="1" stop-color="#29D2C8"/>
     </linearGradient>
   </defs>
+  <circle cx="32" cy="32" r="27" fill="url(#g)"/>
+  <ellipse cx="32" cy="32" rx="12" ry="27" stroke="rgba(255,255,255,0.42)" stroke-width="1.6" fill="none"/>
+  <ellipse cx="32" cy="32" rx="27" ry="12" stroke="rgba(255,255,255,0.32)" stroke-width="1.4" fill="none"/>
+  <path d="M7 32h50" stroke="rgba(255,255,255,0.28)" stroke-width="1.2" stroke-linecap="round"/>
 </svg>`;
 
 export function GET() {

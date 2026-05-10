@@ -560,38 +560,27 @@ input[type="number"] {
   color: var(--ddm-muted);
 }
 
+/* KPI icons: neutral chrome — outline icons on slate, no pastel “badge” fills */
 .kpi-icon-wrap {
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
   display: grid;
   place-items: center;
   flex-shrink: 0;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #475569;
 }
 
-.accent-blue .kpi-icon-wrap {
-  background: rgba(46, 143, 217, 0.14);
-  color: var(--ddm-accent-deep);
-}
-
-.accent-purple .kpi-icon-wrap {
-  background: rgba(124, 58, 237, 0.12);
-  color: #6d28d9;
-}
-
-.accent-amber .kpi-icon-wrap {
-  background: rgba(245, 158, 11, 0.18);
-  color: #b45309;
-}
-
-.accent-green .kpi-icon-wrap {
-  background: rgba(22, 163, 74, 0.14);
-  color: #15803d;
-}
-
+.accent-blue .kpi-icon-wrap,
+.accent-purple .kpi-icon-wrap,
+.accent-amber .kpi-icon-wrap,
+.accent-green .kpi-icon-wrap,
 .accent-orange .kpi-icon-wrap {
-  background: rgba(249, 115, 22, 0.16);
-  color: #c2410c;
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #475569;
 }
 
 .dashboard-panel {
