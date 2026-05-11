@@ -138,8 +138,15 @@ export default function AdminBookingsPage() {
                     {b.property_id ? <div className="muted" style={{ fontSize: 12 }}>{b.property_id}</div> : null}
                   </td>
                   <td>
-                    <strong>{labelCell(b.user_name)}</strong>
+                    {b.buyer_user_id ? (
+                      <Link href={`/admin/users/${encodeURIComponent(b.buyer_user_id)}`} className="link-sm">
+                        <strong>{labelCell(b.user_name)}</strong>
+                      </Link>
+                    ) : (
+                      <strong>{labelCell(b.user_name)}</strong>
+                    )}
                     <div className="muted" style={{ fontSize: 12 }}>{labelCell(b.user_email)}</div>
+                    {b.buyer_user_id ? <div className="muted" style={{ fontSize: 12 }}>{b.buyer_user_id}</div> : null}
                   </td>
                   <td>{labelCell(b.viewing_slot)}</td>
                   <td>
@@ -180,6 +187,14 @@ export default function AdminBookingsPage() {
                 <h3 style={{ marginTop: 0, fontSize: 15 }}>Context</h3>
                 <p><strong>Property:</strong> {labelCell(selected.property_title)}</p>
                 <p><strong>Buyer:</strong> {labelCell(selected.user_name)}</p>
+                {selected.buyer_user_id ? (
+                  <p>
+                    <strong>Buyer link:</strong>{' '}
+                    <Link href={`/admin/users/${encodeURIComponent(selected.buyer_user_id)}`} className="link-sm">
+                      open user
+                    </Link>
+                  </p>
+                ) : null}
                 <p><strong>Email:</strong> {labelCell(selected.user_email)}</p>
                 <p><strong>Created:</strong> {labelCell(selected.created_at)}</p>
                 <p><strong>Viewing slot:</strong> {labelCell(selected.viewing_slot)}</p>
