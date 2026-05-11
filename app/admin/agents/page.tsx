@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiPatch, apiPost } from '@/lib/api';
@@ -14,6 +15,10 @@ type Agent = {
   verification_badge_status?: string | null;
   verification_document_url?: string | null;
   business_license_url?: string | null;
+  selfie_verification_url?: string | null;
+  gov_id_validation_status?: string | null;
+  badge_rejection_reason?: string | null;
+  kyc_tier?: string | null;
   created_at: string;
   email: string;
   full_name: string | null;
@@ -41,10 +46,12 @@ export default function AdminAgentsPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] }),
   });
   const badgeMutation = useMutation({
-    mutationFn: async ({ agent, status }: { agent: Agent; status: 'approved' | 'rejected' }) => {
+    mutationFn: async (args: { agent: Agent; status: string; reason?: string }) => {
       const token = await getAccessToken();
       if (!token) throw new Error('No active session.');
-      await apiPost(`/admin/agents/${agent.id}/badge-review`, token, { status });
+      const body: Record<string, string> = { status: args.status };
+      if (args.reason) body.reason = args.reason;
+      await apiPost(`/admin/agents/${args.agent.id}/badge-review`, token, body);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] }),
   });
@@ -88,6 +95,7 @@ export default function AdminAgentsPage() {
             <tr>
               <th>Email</th>
               <th>Agency</th>
+              <th>KYC</th>
               <th>Verified</th>
               <th>Badge Status</th>
               <th>Documents</th>
@@ -100,8 +108,16 @@ export default function AdminAgentsPage() {
               <tr key={a.id}>
                 <td>{a.email}</td>
                 <td>{a.agency_name ?? '—'}</td>
+                <td>{a.kyc_tier ?? '—'}</td>
                 <td>{a.verified ? 'Yes' : 'No'}</td>
-                <td>{a.verification_badge_status ?? 'unverified'}</td>
+                <td>
+                  <div>{a.verification_badge_status ?? 'unverified'}</div>
+                  {a.badge_rejection_reason ? (
+                    <div className="muted" style={{ fontSize: '0.8rem', marginTop: 4, maxWidth: 220 }}>
+                      {a.badge_rejection_reason}
+                    </div>
+                  ) : null}
+                </td>
                 <td>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     {a.verification_document_url ? (
@@ -114,20 +130,42 @@ export default function AdminAgentsPage() {
                         Business license
                       </a>
                     ) : null}
-                    {!a.verification_document_url && !a.business_license_url ? '—' : null}
+                    {a.selfie_verification_url ? (
+                      <a href={a.selfie_verification_url} target="_blank" rel="noreferrer">
+                        Selfie
+                      </a>
+                    ) : null}
+                    {!a.verification_document_url && !a.business_license_url && !a.selfie_verification_url ? '—' : null}
                   </div>
                 </td>
                 <td>{formatAdminDateTime(a.created_at)}</td>
                 <td className="actions-col">
                   <div className="actions-inline">
+                  <Link href={`/admin/agents/${a.id}`} className="link-sm" style={{ marginRight: 8 }}>
+                    Inspect
+                  </Link>
                   <button type="button" className={`btn ${a.verified ? 'btn-danger' : 'btn-success'}`} onClick={() => toggleMutation.mutate(a)}>
                     {a.verified ? 'Unverify' : 'Approve'}
                   </button>
                   <button type="button" className="btn btn-success" onClick={() => badgeMutation.mutate({ agent: a, status: 'approved' })}>
                     Badge Approve
                   </button>
-                  <button type="button" className="btn btn-danger" onClick={() => badgeMutation.mutate({ agent: a, status: 'rejected' })}>
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    onClick={() => {
+                      const reason = window.prompt('Rejection reason (required):') ?? '';
+                      if (!reason.trim()) return;
+                      badgeMutation.mutate({ agent: a, status: 'rejected', reason: reason.trim() });
+                    }}
+                  >
                     Badge Reject
+                  </button>
+                  <button type="button" className="btn btn-neutral" onClick={() => badgeMutation.mutate({ agent: a, status: 'suspended' })}>
+                    Suspend
+                  </button>
+                  <button type="button" className="btn btn-neutral" onClick={() => badgeMutation.mutate({ agent: a, status: 'expired' })}>
+                    Expired
                   </button>
                   </div>
                 </td>

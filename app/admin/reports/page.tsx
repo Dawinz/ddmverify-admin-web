@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { useAdminQuery, getAccessToken } from '@/lib/use-admin-query';
 
@@ -30,6 +31,9 @@ async function patchReportStatus(id: string, status: ReportRow['status']) {
   if (!res.ok) throw new Error('Failed to update report');
 }
 
+type RiskGroup = { agency_key: string; agent_count: number; agent_ids: string[]; emails: string[] };
+type VelocityRow = { agent_id: string; agency_name: string | null; email: string; listings_last_7d: number };
+
 export default function AdminReportsPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | ReportRow['status']>('all');
@@ -37,12 +41,42 @@ export default function AdminReportsPage() {
     key: ['admin', 'reports', statusFilter],
     path: `/admin/reports?status=${statusFilter}`,
   });
+  const dupAgenciesQ = useAdminQuery<{ groups: RiskGroup[]; count: number }>({
+    key: ['admin', 'risk', 'duplicate-agencies'],
+    path: '/admin/risk/duplicate-agencies',
+  });
+  const velocityQ = useAdminQuery<{ agents: VelocityRow[]; count: number }>({
+    key: ['admin', 'risk', 'agent-listing-velocity'],
+    path: '/admin/risk/agent-listing-velocity',
+  });
 
   const rows = q.data?.items ?? [];
 
   return (
     <div>
       <h1 className="page-title">Reports & moderation</h1>
+      <div className="panel" style={{ marginBottom: 14, padding: 12 }}>
+        <h2 style={{ marginTop: 0, fontSize: '1.05rem' }}>Agent risk (heuristics)</h2>
+        <p className="muted" style={{ marginTop: 4, marginBottom: 10 }}>
+          Duplicate agency names and high listing velocity are signals only — review in{' '}
+          <Link href="/admin/agents" className="link-sm">
+            Agents
+          </Link>
+          .
+        </p>
+        {dupAgenciesQ.error && <p style={{ color: '#dc2626' }}>{(dupAgenciesQ.error as Error).message}</p>}
+        {velocityQ.error && <p style={{ color: '#dc2626' }}>{(velocityQ.error as Error).message}</p>}
+        {!dupAgenciesQ.isLoading && !dupAgenciesQ.error && (
+          <p className="muted" style={{ marginBottom: 8 }}>
+            Duplicate agency keys: <strong>{dupAgenciesQ.data?.count ?? 0}</strong>
+          </p>
+        )}
+        {!velocityQ.isLoading && !velocityQ.error && (
+          <p className="muted" style={{ marginBottom: 8 }}>
+            High listing velocity (7d, ≥6): <strong>{velocityQ.data?.count ?? 0}</strong> agents
+          </p>
+        )}
+      </div>
       <div className="panel" style={{ marginBottom: 14 }}>
         <label className="muted" style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
           Status
