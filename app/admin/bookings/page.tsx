@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiPost } from '@/lib/api';
@@ -7,8 +8,12 @@ import { getAccessToken, useAdminQuery } from '@/lib/use-admin-query';
 
 type ViewingBooking = {
   id: string;
+  property_id?: string | null;
+  buyer_user_id?: string | null;
   property_title?: string | null;
   user_name?: string | null;
+  user_email?: string | null;
+  created_at?: string | null;
   status?: string | null;
   viewing_slot?: string | null;
   viewing_state?: string | null;
@@ -16,11 +21,25 @@ type ViewingBooking = {
   attendance_evidence_url?: string | null;
 };
 
+function stateTone(state: string): { bg: string; fg: string } {
+  const s = state.toLowerCase();
+  if (s === 'completed') return { bg: '#dcfce7', fg: '#166534' };
+  if (s === 'confirmed' || s === 'scheduled') return { bg: '#dbeafe', fg: '#1d4ed8' };
+  if (s === 'rescheduled') return { bg: '#e0e7ff', fg: '#4338ca' };
+  if (s === 'disputed') return { bg: '#ffedd5', fg: '#9a3412' };
+  if (s === 'cancelled' || s === 'no_show') return { bg: '#fee2e2', fg: '#991b1b' };
+  return { bg: '#f1f5f9', fg: '#334155' };
+}
+
+function labelCell(v?: string | null): string {
+  const s = (v ?? '').trim();
+  return s.length > 0 ? s : '—';
+}
+
 export default function AdminBookingsPage() {
   const queryClient = useQueryClient();
   const [query, setQuery] = useState('');
   const [stateFilter, setStateFilter] = useState('all');
-  const [actionsOpenForId, setActionsOpenForId] = useState<string | null>(null);
   const [selected, setSelected] = useState<ViewingBooking | null>(null);
   const bookingsQ = useAdminQuery<{ items: ViewingBooking[] }>({
     key: ['admin', 'bookings', 'viewings'],
@@ -30,11 +49,13 @@ export default function AdminBookingsPage() {
   const items = bookingsQ.data?.items ?? [];
   const filtered = items.filter((b) => {
     const q = query.trim().toLowerCase();
-    const state = (b.viewing_state ?? 'pending').toLowerCase();
+    const state = (b.viewing_state ?? b.status ?? 'pending').toLowerCase();
     const matchesQuery =
       q.length === 0 ||
       (b.property_title ?? '').toLowerCase().includes(q) ||
       (b.user_name ?? '').toLowerCase().includes(q) ||
+      (b.user_email ?? '').toLowerCase().includes(q) ||
+      (b.property_id ?? '').toLowerCase().includes(q) ||
       b.id.toLowerCase().includes(q);
     const matchesState = stateFilter === 'all' || state === stateFilter;
     return matchesQuery && matchesState;
@@ -56,7 +77,7 @@ export default function AdminBookingsPage() {
       {bookingsQ.error && <p style={{ color: '#dc2626', marginBottom: 16 }}>{(bookingsQ.error as Error).message}</p>}
       {updateMutation.error && <p style={{ color: '#dc2626', marginBottom: 16 }}>{(updateMutation.error as Error).message}</p>}
       <div className="panel" style={{ marginBottom: 16 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(240px, 1fr) minmax(140px, 180px)', gap: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(240px, 1fr) minmax(160px, 200px)', gap: 10 }}>
           <label style={{ display: 'grid', gap: 6 }}>
             <span className="muted">Search</span>
             <input
@@ -89,70 +110,51 @@ export default function AdminBookingsPage() {
               <th>Property</th>
               <th>Buyer</th>
               <th>Viewing Slot</th>
-              <th>Status</th>
-              <th>State</th>
+              <th>Lifecycle</th>
               <th className="actions-col">Actions</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: 24 }}>
+                <td colSpan={5} style={{ textAlign: 'center', padding: 24 }}>
                   No matching viewing schedules
                 </td>
               </tr>
             )}
             {filtered.map((b) => {
-              const actionsVisible = actionsOpenForId === b.id;
+              const lifecycle = (b.viewing_state ?? b.status ?? 'pending').toLowerCase();
+              const tone = stateTone(lifecycle);
               return (
-                <>
-                  <tr key={b.id}>
-                    <td>{b.property_title ?? '—'}</td>
-                    <td>{b.user_name ?? '—'}</td>
-                    <td>{b.viewing_slot ?? '—'}</td>
-                    <td>{b.status ?? 'pending'}</td>
-                    <td>{b.viewing_state ?? 'pending'}</td>
-                    <td className="actions-col">
-                      <div className="actions-inline">
-                        <button type="button" className="btn btn-neutral" onClick={() => setSelected(b)}>
-                          View details
-                        </button>
-                        <button type="button" className="btn btn-neutral" onClick={() => setActionsOpenForId((prev) => (prev === b.id ? null : b.id))}>
-                          {actionsVisible ? 'Hide actions' : 'View actions'}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                  {actionsVisible && (
-                    <tr key={`${b.id}-actions`}>
-                      <td colSpan={6} style={{ background: '#f8fafc' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8, padding: 10 }}>
-                          <button type="button" className="btn btn-neutral" onClick={() => updateMutation.mutate({ id: b.id, state: 'scheduled' })}>
-                            Schedule
-                          </button>
-                          <button type="button" className="btn btn-neutral" onClick={() => updateMutation.mutate({ id: b.id, state: 'confirmed' })}>
-                            Confirm
-                          </button>
-                          <button type="button" className="btn btn-success" onClick={() => updateMutation.mutate({ id: b.id, state: 'completed' })}>
-                            Complete
-                          </button>
-                          <button type="button" className="btn btn-neutral" onClick={() => updateMutation.mutate({ id: b.id, state: 'rescheduled' })}>
-                            Reschedule
-                          </button>
-                          <button type="button" className="btn btn-neutral" onClick={() => updateMutation.mutate({ id: b.id, state: 'disputed' })}>
-                            Dispute
-                          </button>
-                          <button type="button" className="btn btn-neutral" onClick={() => updateMutation.mutate({ id: b.id, state: 'no_show' })}>
-                            No-show
-                          </button>
-                          <button type="button" className="btn btn-danger" onClick={() => updateMutation.mutate({ id: b.id, state: 'cancelled' })}>
-                            Cancel
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </>
+                <tr key={b.id}>
+                  <td>
+                    {b.property_id ? (
+                      <Link href={`/admin/properties/${encodeURIComponent(b.property_id)}`} className="link-sm">
+                        {labelCell(b.property_title)}
+                      </Link>
+                    ) : (
+                      labelCell(b.property_title)
+                    )}
+                    {b.property_id ? <div className="muted" style={{ fontSize: 12 }}>{b.property_id}</div> : null}
+                  </td>
+                  <td>
+                    <strong>{labelCell(b.user_name)}</strong>
+                    <div className="muted" style={{ fontSize: 12 }}>{labelCell(b.user_email)}</div>
+                  </td>
+                  <td>{labelCell(b.viewing_slot)}</td>
+                  <td>
+                    <span style={{ background: tone.bg, color: tone.fg, borderRadius: 999, padding: '4px 10px', fontSize: 12, fontWeight: 700 }}>
+                      {lifecycle}
+                    </span>
+                  </td>
+                  <td className="actions-col">
+                    <div className="actions-inline">
+                      <button type="button" className="btn btn-neutral" onClick={() => setSelected(b)}>
+                        View details
+                      </button>
+                    </div>
+                  </td>
+                </tr>
               );
             })}
           </tbody>
@@ -160,23 +162,73 @@ export default function AdminBookingsPage() {
       </div>
       {selected && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', display: 'grid', placeItems: 'center', zIndex: 60, padding: 16 }} onClick={() => setSelected(null)}>
-          <div className="panel" style={{ width: 'min(700px, 100%)' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ marginTop: 0, marginBottom: 12 }}>Booking details</h2>
-            <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-              <div><strong>Booking ID:</strong> <code>{selected.id}</code></div>
-              <div><strong>Status:</strong> {selected.status ?? 'pending'}</div>
-              <div><strong>State:</strong> {selected.viewing_state ?? 'pending'}</div>
-              <div><strong>Property:</strong> {selected.property_title ?? '—'}</div>
-              <div><strong>Buyer:</strong> {selected.user_name ?? '—'}</div>
-              <div style={{ gridColumn: '1 / -1' }}><strong>Viewing slot:</strong> {selected.viewing_slot ?? '—'}</div>
-              {selected.dispute_reason ? <div style={{ gridColumn: '1 / -1' }}><strong>Dispute reason:</strong> {selected.dispute_reason}</div> : null}
-              {selected.attendance_evidence_url ? <div style={{ gridColumn: '1 / -1' }}><strong>Attendance evidence:</strong> <a href={selected.attendance_evidence_url} target="_blank" rel="noreferrer">Open file</a></div> : null}
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+          <div className="panel" style={{ width: 'min(860px, 100%)', borderRadius: 16, padding: 18 }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <div>
+                <h2 style={{ margin: 0 }}>Booking details</h2>
+                <p className="muted" style={{ margin: '4px 0 0' }}>
+                  Booking ID <code>{selected.id}</code>
+                </p>
+              </div>
               <button type="button" className="btn btn-neutral" onClick={() => setSelected(null)}>
                 Close
               </button>
             </div>
+
+            <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
+              <div className="panel" style={{ padding: 12 }}>
+                <h3 style={{ marginTop: 0, fontSize: 15 }}>Context</h3>
+                <p><strong>Property:</strong> {labelCell(selected.property_title)}</p>
+                <p><strong>Buyer:</strong> {labelCell(selected.user_name)}</p>
+                <p><strong>Email:</strong> {labelCell(selected.user_email)}</p>
+                <p><strong>Created:</strong> {labelCell(selected.created_at)}</p>
+                <p><strong>Viewing slot:</strong> {labelCell(selected.viewing_slot)}</p>
+                <p><strong>Status:</strong> {labelCell(selected.status)}</p>
+                <p><strong>State:</strong> {labelCell(selected.viewing_state)}</p>
+                {selected.property_id ? (
+                  <p>
+                    <strong>Property link:</strong>{' '}
+                    <Link href={`/admin/properties/${encodeURIComponent(selected.property_id)}`} className="link-sm">
+                      open property
+                    </Link>
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="panel" style={{ padding: 12 }}>
+                <h3 style={{ marginTop: 0, fontSize: 15 }}>Lifecycle actions</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
+                  <button type="button" className="btn btn-neutral" onClick={() => updateMutation.mutate({ id: selected.id, state: 'scheduled' })}>Schedule</button>
+                  <button type="button" className="btn btn-neutral" onClick={() => updateMutation.mutate({ id: selected.id, state: 'confirmed' })}>Confirm</button>
+                  <button type="button" className="btn btn-success" onClick={() => updateMutation.mutate({ id: selected.id, state: 'completed' })}>Complete</button>
+                  <button type="button" className="btn btn-neutral" onClick={() => updateMutation.mutate({ id: selected.id, state: 'rescheduled' })}>Reschedule</button>
+                  <button type="button" className="btn btn-neutral" onClick={() => updateMutation.mutate({ id: selected.id, state: 'disputed' })}>Dispute</button>
+                  <button type="button" className="btn btn-neutral" onClick={() => updateMutation.mutate({ id: selected.id, state: 'no_show' })}>No-show</button>
+                  <button type="button" className="btn btn-danger" style={{ gridColumn: '1 / -1' }} onClick={() => updateMutation.mutate({ id: selected.id, state: 'cancelled' })}>Cancel</button>
+                </div>
+              </div>
+            </div>
+
+            {(selected.dispute_reason || selected.attendance_evidence_url) && (
+              <div className="panel" style={{ marginTop: 12, padding: 12 }}>
+                <h3 style={{ marginTop: 0, fontSize: 15 }}>Evidence & notes</h3>
+                {selected.dispute_reason ? (
+                  <p><strong>Dispute reason:</strong> {selected.dispute_reason}</p>
+                ) : (
+                  <p className="muted">No dispute reason recorded.</p>
+                )}
+                {selected.attendance_evidence_url ? (
+                  <p>
+                    <strong>Attendance evidence:</strong>{' '}
+                    <a href={selected.attendance_evidence_url} target="_blank" rel="noreferrer" className="link-sm">
+                      open file
+                    </a>
+                  </p>
+                ) : (
+                  <p className="muted">No attendance evidence uploaded yet.</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
