@@ -7,7 +7,17 @@ import { apiDelete } from '@/lib/api';
 import { formatAdminDateTime } from '@/lib/format-datetime';
 import { getAccessToken, useAdminQuery } from '@/lib/use-admin-query';
 
-type Property = { id: string; title: string; location: string | null; category: string; verification_status: string; created_at: string; agency_name: string | null; agent_email: string };
+type Property = {
+  id: string;
+  title: string;
+  location: string | null;
+  category: string;
+  verification_status: string;
+  listing_status?: string;
+  created_at: string;
+  agency_name: string | null;
+  agent_email: string;
+};
 
 export default function AdminPropertiesPage() {
   const queryClient = useQueryClient();
@@ -89,7 +99,8 @@ export default function AdminPropertiesPage() {
               <th>Title</th>
               <th>Location</th>
               <th>Category</th>
-              <th>Status</th>
+              <th>Verification</th>
+              <th>Listing</th>
               <th>Agent</th>
               <th>Created</th>
               <th className="actions-col">Actions</th>
@@ -98,7 +109,7 @@ export default function AdminPropertiesPage() {
           <tbody>
             {items.length === 0 && (
               <tr>
-                <td colSpan={7} style={{ textAlign: 'center', padding: 24 }}>
+                <td colSpan={8} style={{ textAlign: 'center', padding: 24 }}>
                   No matching properties
                 </td>
               </tr>
@@ -109,6 +120,7 @@ export default function AdminPropertiesPage() {
                 <td>{p.location ?? '—'}</td>
                 <td>{p.category}</td>
                 <td>{p.verification_status}</td>
+                <td>{p.listing_status ?? 'active'}</td>
                 <td>{p.agent_email}</td>
                 <td>{formatAdminDateTime(p.created_at)}</td>
                 <td className="actions-col">

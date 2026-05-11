@@ -28,12 +28,18 @@ export async function apiGetOptional<T>(path: string, token: string, fallback: T
   return res.json();
 }
 
-export async function apiPatch(path: string, token: string, body: object): Promise<unknown> {
+export async function apiPatch(
+  path: string,
+  token: string,
+  body: object,
+  extraHeaders?: Record<string, string>,
+): Promise<unknown> {
   const res = await fetch(`${API_URL}${path}`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
+      ...(extraHeaders ?? {}),
     },
     body: JSON.stringify(body),
     cache: 'no-store',
@@ -42,12 +48,38 @@ export async function apiPatch(path: string, token: string, body: object): Promi
   return res.json();
 }
 
-export async function apiPost(path: string, token: string, body: object): Promise<unknown> {
+export async function apiPost(
+  path: string,
+  token: string,
+  body: object,
+  extraHeaders?: Record<string, string>,
+): Promise<unknown> {
   const res = await fetch(`${API_URL}${path}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
+      ...(extraHeaders ?? {}),
+    },
+    body: JSON.stringify(body),
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json();
+}
+
+export async function apiPut(
+  path: string,
+  token: string,
+  body: object,
+  extraHeaders?: Record<string, string>,
+): Promise<unknown> {
+  const res = await fetch(`${API_URL}${path}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      ...(extraHeaders ?? {}),
     },
     body: JSON.stringify(body),
     cache: 'no-store',

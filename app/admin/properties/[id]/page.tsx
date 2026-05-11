@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
+import { apiPatch } from '@/lib/api';
 import { useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, ImageOff, X } from 'lucide-react';
 import { useAdminQuery, getAccessToken } from '@/lib/use-admin-query';
@@ -74,6 +75,10 @@ export default function AdminPropertyDetailPage() {
   const [actionBusy, setActionBusy] = useState(false);
   const [actionError, setActionError] = useState('');
   const [actionOk, setActionOk] = useState('');
+  const [rowVersion, setRowVersion] = useState<string | null>(null);
+  const [listingStatus, setListingStatus] = useState<'active' | 'expired' | 'revoked'>('active');
+  const [listingBusy, setListingBusy] = useState(false);
+  const [listingMsg, setListingMsg] = useState('');
 
   const images = q.data?.images ?? [];
   const lightboxOpen =
@@ -108,14 +113,39 @@ export default function AdminPropertyDetailPage() {
     };
   }, [lightboxOpen, closeLightbox, goPrev, goNext]);
 
+  useEffect(() => {
+    const row = q.data?.property as Record<string, unknown> | undefined;
+    if (!row) return;
+    const rv = row['row_version'];
+    if (rv !== undefined && rv !== null) setRowVersion(String(rv));
+    const ls = row['listing_status'];
+    if (ls === 'active' || ls === 'expired' || ls === 'revoked') {
+      setListingStatus(ls);
+    }
+  }, [q.data?.property]);
+
+  function ifMatchHeaders(): Record<string, string> | undefined {
+    if (!rowVersion || rowVersion.trim() === '') return undefined;
+    return { 'If-Match': `W/"${rowVersion.trim()}"` };
+  }
+
   async function postVerification(path: string, body: Record<string, unknown>) {
     const token = await getAccessToken();
     if (!token) throw new Error('No active session.');
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    };
+    const im = ifMatchHeaders();
+    if (im) Object.assign(headers, im);
     const res = await fetch(`${API}${path}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers,
       body: JSON.stringify(body),
     });
+    if (res.status === 409) {
+      throw new Error('Version conflict — refresh the page and try again.');
+    }
     if (!res.ok) {
       let msg = res.statusText;
       try {
@@ -125,6 +155,12 @@ export default function AdminPropertyDetailPage() {
         /* ignore */
       }
       throw new Error(msg);
+    }
+    try {
+      const j = (await res.json()) as { row_version?: string | number };
+      if (j.row_version != null) setRowVersion(String(j.row_version));
+    } catch {
+      /* ignore */
     }
   }
 
@@ -179,6 +215,7 @@ export default function AdminPropertyDetailPage() {
     ['Location', str(row.location)],
     ['Price', str(row.price)],
     ['Category', str(row.category)],
+    ['Listing status', str(row.listing_status)],
     ['Verification', str(row.verification_status)],
     ['Created', formatAdminDateTime(row.created_at as string)],
     ['Updated', formatAdminDateTime(row.updated_at as string)],
@@ -202,12 +239,23 @@ export default function AdminPropertyDetailPage() {
       <div className="panel property-detail-actions property-detail-panel" style={{ marginBottom: 16 }}>
         <div className="property-detail-actions__head">
           <h2 style={{ margin: 0, fontSize: '1.1rem' }}>Verification & actions</h2>
-          <Link href="/admin/verification" className="link-sm">
-            Open verification queue →
-          </Link>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
+            <Link href={`/admin/properties/${encodeURIComponent(id)}/verification-report`} className="btn btn-neutral link-sm" style={{ textDecoration: 'none' }}>
+              Edit verification report
+            </Link>
+            <Link href="/admin/verification" className="link-sm">
+              Open verification queue →
+            </Link>
+          </div>
         </div>
         <p className="muted" style={{ margin: '0 0 12px', fontSize: 13 }}>
           Run the same checks as the verification queue: approve, reject, request changes, or suspend this listing.
+          {rowVersion != null ? (
+            <>
+              {' '}
+              Row version <code>{rowVersion}</code> is sent as <code>If-Match</code> when present.
+            </>
+          ) : null}
         </p>
         {actionError && (
           <p style={{ color: '#dc2626', margin: '0 0 10px', fontSize: 14 }} role="alert">
@@ -280,6 +328,66 @@ export default function AdminPropertyDetailPage() {
             }}
           >
             Suspend
+          </button>
+        </div>
+      </div>
+
+      <div className="panel property-detail-panel" style={{ marginBottom: 16 }}>
+        <h2 style={{ marginTop: 0, fontSize: '1.1rem' }}>Public catalog listing</h2>
+        <p className="muted" style={{ margin: '0 0 12px', fontSize: 13, maxWidth: 560 }}>
+          Non‑active listings are hidden from <code>GET /catalog/properties</code>. Uses the same row version as other actions.
+        </p>
+        {listingMsg && (
+          <p style={{ color: '#15803d', margin: '0 0 10px', fontSize: 14 }} role="status">
+            {listingMsg}
+          </p>
+        )}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
+          <label className="muted" style={{ fontSize: 13 }}>
+            Status{' '}
+            <select
+              className="input"
+              style={{ marginLeft: 8 }}
+              value={listingStatus}
+              disabled={listingBusy}
+              onChange={(e) => setListingStatus(e.target.value as 'active' | 'expired' | 'revoked')}
+            >
+              <option value="active">active</option>
+              <option value="expired">expired</option>
+              <option value="revoked">revoked</option>
+            </select>
+          </label>
+          <button
+            type="button"
+            className="btn btn-neutral"
+            disabled={listingBusy}
+            onClick={() => {
+              void (async () => {
+                setListingMsg('');
+                setActionError('');
+                setListingBusy(true);
+                try {
+                  const token = await getAccessToken();
+                  if (!token) throw new Error('No active session.');
+                  const out = (await apiPatch(
+                    `/admin/properties/${encodeURIComponent(id)}/listing-status`,
+                    token,
+                    { listing_status: listingStatus },
+                    ifMatchHeaders(),
+                  )) as { row_version?: string | number };
+                  if (out.row_version != null) setRowVersion(String(out.row_version));
+                  setListingMsg('Listing status updated.');
+                  await queryClient.invalidateQueries({ queryKey: ['admin', 'property', id] });
+                  await queryClient.invalidateQueries({ queryKey: ['admin', 'properties'] });
+                } catch (e) {
+                  setActionError(e instanceof Error ? e.message : 'Update failed');
+                } finally {
+                  setListingBusy(false);
+                }
+              })();
+            }}
+          >
+            {listingBusy ? 'Saving…' : 'Save listing status'}
           </button>
         </div>
       </div>
