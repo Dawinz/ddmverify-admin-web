@@ -9,8 +9,11 @@ type ViewingBooking = {
   id: string;
   property_title?: string | null;
   user_name?: string | null;
+  status?: string | null;
   viewing_slot?: string | null;
   viewing_state?: string | null;
+  dispute_reason?: string | null;
+  attendance_evidence_url?: string | null;
 };
 
 export default function AdminBookingsPage() {
@@ -69,8 +72,12 @@ export default function AdminBookingsPage() {
               <option value="all">All</option>
               <option value="pending">pending</option>
               <option value="scheduled">scheduled</option>
+              <option value="confirmed">confirmed</option>
               <option value="completed">completed</option>
               <option value="cancelled">cancelled</option>
+              <option value="rescheduled">rescheduled</option>
+              <option value="disputed">disputed</option>
+              <option value="no_show">no_show</option>
             </select>
           </label>
         </div>
@@ -82,6 +89,7 @@ export default function AdminBookingsPage() {
               <th>Property</th>
               <th>Buyer</th>
               <th>Viewing Slot</th>
+              <th>Status</th>
               <th>State</th>
               <th className="actions-col">Actions</th>
             </tr>
@@ -89,7 +97,7 @@ export default function AdminBookingsPage() {
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={5} style={{ textAlign: 'center', padding: 24 }}>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: 24 }}>
                   No matching viewing schedules
                 </td>
               </tr>
@@ -102,6 +110,7 @@ export default function AdminBookingsPage() {
                     <td>{b.property_title ?? '—'}</td>
                     <td>{b.user_name ?? '—'}</td>
                     <td>{b.viewing_slot ?? '—'}</td>
+                    <td>{b.status ?? 'pending'}</td>
                     <td>{b.viewing_state ?? 'pending'}</td>
                     <td className="actions-col">
                       <div className="actions-inline">
@@ -116,13 +125,25 @@ export default function AdminBookingsPage() {
                   </tr>
                   {actionsVisible && (
                     <tr key={`${b.id}-actions`}>
-                      <td colSpan={5} style={{ background: '#f8fafc' }}>
+                      <td colSpan={6} style={{ background: '#f8fafc' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8, padding: 10 }}>
                           <button type="button" className="btn btn-neutral" onClick={() => updateMutation.mutate({ id: b.id, state: 'scheduled' })}>
                             Schedule
                           </button>
+                          <button type="button" className="btn btn-neutral" onClick={() => updateMutation.mutate({ id: b.id, state: 'confirmed' })}>
+                            Confirm
+                          </button>
                           <button type="button" className="btn btn-success" onClick={() => updateMutation.mutate({ id: b.id, state: 'completed' })}>
                             Complete
+                          </button>
+                          <button type="button" className="btn btn-neutral" onClick={() => updateMutation.mutate({ id: b.id, state: 'rescheduled' })}>
+                            Reschedule
+                          </button>
+                          <button type="button" className="btn btn-neutral" onClick={() => updateMutation.mutate({ id: b.id, state: 'disputed' })}>
+                            Dispute
+                          </button>
+                          <button type="button" className="btn btn-neutral" onClick={() => updateMutation.mutate({ id: b.id, state: 'no_show' })}>
+                            No-show
                           </button>
                           <button type="button" className="btn btn-danger" onClick={() => updateMutation.mutate({ id: b.id, state: 'cancelled' })}>
                             Cancel
@@ -143,10 +164,13 @@ export default function AdminBookingsPage() {
             <h2 style={{ marginTop: 0, marginBottom: 12 }}>Booking details</h2>
             <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
               <div><strong>Booking ID:</strong> <code>{selected.id}</code></div>
+              <div><strong>Status:</strong> {selected.status ?? 'pending'}</div>
               <div><strong>State:</strong> {selected.viewing_state ?? 'pending'}</div>
               <div><strong>Property:</strong> {selected.property_title ?? '—'}</div>
               <div><strong>Buyer:</strong> {selected.user_name ?? '—'}</div>
               <div style={{ gridColumn: '1 / -1' }}><strong>Viewing slot:</strong> {selected.viewing_slot ?? '—'}</div>
+              {selected.dispute_reason ? <div style={{ gridColumn: '1 / -1' }}><strong>Dispute reason:</strong> {selected.dispute_reason}</div> : null}
+              {selected.attendance_evidence_url ? <div style={{ gridColumn: '1 / -1' }}><strong>Attendance evidence:</strong> <a href={selected.attendance_evidence_url} target="_blank" rel="noreferrer">Open file</a></div> : null}
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
               <button type="button" className="btn btn-neutral" onClick={() => setSelected(null)}>
