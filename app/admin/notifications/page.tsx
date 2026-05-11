@@ -15,11 +15,34 @@ type NotificationRow = {
   user_email: string | null;
 };
 
+type DeliveryCountRow = { channel: string; status: string; count: number };
+type DeliveryRecentRow = {
+  id: string;
+  user_id: string;
+  channel: string;
+  recipient: string | null;
+  status: string;
+  error_class?: string | null;
+  error_message?: string | null;
+  created_at: string;
+};
+
+type NotificationsSummaryPayload = {
+  ok?: boolean;
+  counts: DeliveryCountRow[];
+  recent: DeliveryRecentRow[];
+};
+
 export default function AdminNotificationsPage() {
   const queryClient = useQueryClient();
   const feedQ = useAdminQuery<{ items: NotificationRow[] }>({
     key: ['admin', 'notifications-feed'],
     path: '/admin/notifications-feed?limit=100',
+  });
+  const summaryQ = useAdminQuery<NotificationsSummaryPayload>({
+    key: ['admin', 'notifications-summary'],
+    path: '/admin/notifications/summary',
+    fallback: { counts: [], recent: [] },
   });
 
   const [testUserId, setTestUserId] = useState('');
@@ -44,6 +67,7 @@ export default function AdminNotificationsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'notifications-feed'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'notifications-summary'] });
       setTestMsg('Test queued — new row should appear below if FCM env and tokens are set.');
     },
     onError: (e: Error) => {
@@ -62,6 +86,7 @@ export default function AdminNotificationsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'notifications-feed'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'notifications-summary'] });
       setBroadcastMsg('Broadcast submitted. Check feed below for inserted rows.');
     },
     onError: (e: Error) => {
@@ -70,6 +95,8 @@ export default function AdminNotificationsPage() {
   });
 
   const items = feedQ.data?.items ?? [];
+  const counts = summaryQ.data?.counts ?? [];
+  const recentDelivery = summaryQ.data?.recent ?? [];
 
   if (feedQ.isLoading) return <p className="muted">Loading notifications…</p>;
 
@@ -85,6 +112,72 @@ export default function AdminNotificationsPage() {
       {feedQ.error && (
         <p style={{ color: '#dc2626', marginBottom: 16 }}>{(feedQ.error as Error).message}</p>
       )}
+      {summaryQ.error && (
+        <p style={{ color: '#dc2626', marginBottom: 16 }}>{(summaryQ.error as Error).message}</p>
+      )}
+
+      <div className="panel panel-scroll" style={{ marginBottom: 20 }}>
+        <h2 style={{ fontSize: '1rem', margin: '0 0 12px' }}>Delivery telemetry (30d counts)</h2>
+        {summaryQ.isLoading ? (
+          <p className="muted">Loading delivery summary…</p>
+        ) : counts.length === 0 ? (
+          <p className="muted">No delivery log rows in the last 30 days.</p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>Channel</th>
+                <th>Status</th>
+                <th>Count</th>
+              </tr>
+            </thead>
+            <tbody>
+              {counts.map((c, i) => (
+                <tr key={`${c.channel}-${c.status}-${i}`}>
+                  <td>{c.channel}</td>
+                  <td>{c.status}</td>
+                  <td>{c.count}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        <h3 style={{ fontSize: '0.95rem', margin: '16px 0 8px' }}>Recent delivery events</h3>
+        {recentDelivery.length === 0 ? (
+          <p className="muted">No recent delivery rows.</p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>When</th>
+                <th>User</th>
+                <th>Channel</th>
+                <th>Recipient</th>
+                <th>Status</th>
+                <th>Error</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentDelivery.map((r) => (
+                <tr key={r.id}>
+                  <td style={{ whiteSpace: 'nowrap', fontSize: 13 }}>
+                    {r.created_at ? new Date(r.created_at).toLocaleString() : '—'}
+                  </td>
+                  <td style={{ fontSize: 12 }} className="muted">
+                    {r.user_id?.slice(0, 8)}…
+                  </td>
+                  <td>{r.channel}</td>
+                  <td style={{ fontSize: 12, maxWidth: 140 }}>{r.recipient ?? '—'}</td>
+                  <td>{r.status}</td>
+                  <td style={{ fontSize: 12, maxWidth: 220 }}>
+                    {r.error_class ?? ''} {r.error_message ? `· ${r.error_message.slice(0, 120)}` : ''}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
 
       <div className="panel" style={{ marginBottom: 20, padding: 16 }}>
         <h2 style={{ fontSize: '1rem', margin: '0 0 12px' }}>Send notifications to all installed devices</h2>
