@@ -1,12 +1,23 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiPatch } from '@/lib/api';
 import { formatAdminDateTime } from '@/lib/format-datetime';
 import { getAccessToken, useAdminQuery } from '@/lib/use-admin-query';
 
-type User = { id: string; email: string; phone: string | null; full_name: string | null; role: string; banned: boolean; created_at: string };
+type User = {
+  id: string;
+  email: string;
+  phone: string | null;
+  full_name: string | null;
+  role: string;
+  banned: boolean;
+  account_status?: string;
+  risk_score?: number;
+  created_at: string;
+};
 
 export default function AdminUsersPage() {
   const queryClient = useQueryClient();
@@ -74,6 +85,8 @@ export default function AdminUsersPage() {
               <th>Email</th>
               <th>Name</th>
               <th>Role</th>
+              <th>Status</th>
+              <th>Risk</th>
               <th>Banned</th>
               <th>Created</th>
               <th>Actions</th>
@@ -85,9 +98,14 @@ export default function AdminUsersPage() {
                 <td>{u.email}</td>
                 <td>{u.full_name ?? '—'}</td>
                 <td>{u.role}</td>
+                <td>{u.account_status ?? (u.banned ? 'banned' : 'active')}</td>
+                <td>{u.risk_score ?? 0}</td>
                 <td>{u.banned ? 'Yes' : 'No'}</td>
                 <td>{formatAdminDateTime(u.created_at)}</td>
                 <td>
+                  <Link href={`/admin/users/${u.id}`} className="link-sm" style={{ marginRight: 10 }}>
+                    Inspect
+                  </Link>
                   <button
                     type="button"
                     className={`btn ${u.banned ? 'btn-success' : 'btn-danger'}`}
