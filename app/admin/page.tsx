@@ -42,7 +42,12 @@ type DashboardPayload = {
   };
   insights: { severity: 'critical' | 'warning' | 'info' | 'positive'; message: string }[];
   notifications_24h?: number;
-  totals?: { pending_verification: number; properties: number; verified_properties: number };
+  totals?: {
+    pending_verification: number;
+    properties: number;
+    verified_properties: number;
+    open_listing_reports?: number;
+  };
 };
 
 const kpiIcons: Record<string, typeof Building2> = {
