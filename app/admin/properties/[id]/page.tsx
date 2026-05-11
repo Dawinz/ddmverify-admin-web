@@ -12,6 +12,16 @@ import { formatAdminDateTime } from '@/lib/format-datetime';
 type PropertyDetailResponse = {
   property: Record<string, unknown>;
   images: Array<{ id: string; image_url: string }>;
+  documents?: Array<{ id: string; document_type: string; document_url: string; created_at?: string }>;
+  evidence?: Array<{
+    id: string;
+    evidence_type: string;
+    file_url: string | null;
+    notes: string | null;
+    government_reference: string | null;
+    is_internal: boolean;
+    created_at: string;
+  }>;
 };
 
 const API = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/$/, '');
@@ -76,7 +86,9 @@ export default function AdminPropertyDetailPage() {
   const [actionError, setActionError] = useState('');
   const [actionOk, setActionOk] = useState('');
   const [rowVersion, setRowVersion] = useState<string | null>(null);
-  const [listingStatus, setListingStatus] = useState<'active' | 'expired' | 'revoked'>('active');
+  const [listingStatus, setListingStatus] = useState<
+    'active' | 'expired' | 'revoked' | 'draft' | 'pending' | 'under_verification' | 'verified' | 'rejected' | 'suspended' | 'archived' | 'duplicate_detected'
+  >('active');
   const [listingBusy, setListingBusy] = useState(false);
   const [listingMsg, setListingMsg] = useState('');
 
@@ -119,7 +131,19 @@ export default function AdminPropertyDetailPage() {
     const rv = row['row_version'];
     if (rv !== undefined && rv !== null) setRowVersion(String(rv));
     const ls = row['listing_status'];
-    if (ls === 'active' || ls === 'expired' || ls === 'revoked') {
+    if (
+      ls === 'active' ||
+      ls === 'expired' ||
+      ls === 'revoked' ||
+      ls === 'draft' ||
+      ls === 'pending' ||
+      ls === 'under_verification' ||
+      ls === 'verified' ||
+      ls === 'rejected' ||
+      ls === 'suspended' ||
+      ls === 'archived' ||
+      ls === 'duplicate_detected'
+    ) {
       setListingStatus(ls);
     }
   }, [q.data?.property]);
@@ -216,7 +240,11 @@ export default function AdminPropertyDetailPage() {
     ['Price', str(row.price)],
     ['Category', str(row.category)],
     ['Listing status', str(row.listing_status)],
+    ['Lifecycle', str(row.property_lifecycle_status)],
     ['Verification', str(row.verification_status)],
+    ['Owner', str(row.owner_name)],
+    ['Title number', str(row.title_number)],
+    ['Coordinates', `${str(row.latitude)}, ${str(row.longitude)}`],
     ['Created', formatAdminDateTime(row.created_at as string)],
     ['Updated', formatAdminDateTime(row.updated_at as string)],
     ['Agent email', str(row.agent_email)],
@@ -350,11 +378,19 @@ export default function AdminPropertyDetailPage() {
               style={{ marginLeft: 8 }}
               value={listingStatus}
               disabled={listingBusy}
-              onChange={(e) => setListingStatus(e.target.value as 'active' | 'expired' | 'revoked')}
+              onChange={(e) => setListingStatus(e.target.value as typeof listingStatus)}
             >
               <option value="active">active</option>
               <option value="expired">expired</option>
               <option value="revoked">revoked</option>
+              <option value="draft">draft</option>
+              <option value="pending">pending</option>
+              <option value="under_verification">under_verification</option>
+              <option value="verified">verified</option>
+              <option value="rejected">rejected</option>
+              <option value="suspended">suspended</option>
+              <option value="archived">archived</option>
+              <option value="duplicate_detected">duplicate_detected</option>
             </select>
           </label>
           <button
@@ -389,6 +425,46 @@ export default function AdminPropertyDetailPage() {
           >
             {listingBusy ? 'Saving…' : 'Save listing status'}
           </button>
+        </div>
+      </div>
+
+      <div className="panel property-detail-panel" style={{ marginBottom: 16 }}>
+        <h2 style={{ marginTop: 0, fontSize: '1.1rem' }}>Evidence & verification documents</h2>
+        <p className="muted" style={{ marginTop: 0, marginBottom: 12 }}>
+          Includes ownership docs, site evidence, government refs, and internal verification notes.
+        </p>
+        <div style={{ marginBottom: 12 }}>
+          <h3 style={{ margin: '0 0 8px', fontSize: '1rem' }}>Uploaded documents</h3>
+          {(q.data?.documents ?? []).length === 0 && <p className="muted">No verification documents uploaded.</p>}
+          {(q.data?.documents ?? []).map((d) => (
+            <div key={d.id} style={{ marginBottom: 8 }}>
+              <strong>{d.document_type}</strong>{' '}
+              <a href={d.document_url} target="_blank" rel="noreferrer" className="link-sm">
+                open file
+              </a>
+            </div>
+          ))}
+        </div>
+        <div>
+          <h3 style={{ margin: '0 0 8px', fontSize: '1rem' }}>Evidence records</h3>
+          {(q.data?.evidence ?? []).length === 0 && <p className="muted">No evidence records yet.</p>}
+          {(q.data?.evidence ?? []).map((e) => (
+            <div key={e.id} style={{ borderTop: '1px solid #e5e7eb', padding: '8px 0' }}>
+              <div>
+                <strong>{e.evidence_type}</strong>
+                {e.is_internal ? <span className="muted"> (internal)</span> : null}
+              </div>
+              {e.file_url ? (
+                <div>
+                  <a href={e.file_url} target="_blank" rel="noreferrer" className="link-sm">
+                    open evidence file
+                  </a>
+                </div>
+              ) : null}
+              {e.government_reference ? <div>Ref: {e.government_reference}</div> : null}
+              {e.notes ? <div className="muted">{e.notes}</div> : null}
+            </div>
+          ))}
         </div>
       </div>
 

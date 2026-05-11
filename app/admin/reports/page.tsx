@@ -33,6 +33,12 @@ async function patchReportStatus(id: string, status: ReportRow['status']) {
 
 type RiskGroup = { agency_key: string; agent_count: number; agent_ids: string[]; emails: string[] };
 type VelocityRow = { agent_id: string; agency_name: string | null; email: string; listings_last_7d: number };
+type DupPropertySignals = {
+  coordinate_duplicates: Array<{ property_count: number }>;
+  title_number_duplicates: Array<{ property_count: number }>;
+  owner_name_duplicates: Array<{ property_count: number }>;
+  image_reuse_duplicates: Array<{ property_count: number }>;
+};
 
 export default function AdminReportsPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -48,6 +54,10 @@ export default function AdminReportsPage() {
   const velocityQ = useAdminQuery<{ agents: VelocityRow[]; count: number }>({
     key: ['admin', 'risk', 'agent-listing-velocity'],
     path: '/admin/risk/agent-listing-velocity',
+  });
+  const dupPropsQ = useAdminQuery<DupPropertySignals>({
+    key: ['admin', 'risk', 'duplicate-property-signals'],
+    path: '/admin/risk/duplicate-property-signals',
   });
 
   const rows = q.data?.items ?? [];
@@ -74,6 +84,22 @@ export default function AdminReportsPage() {
         {!velocityQ.isLoading && !velocityQ.error && (
           <p className="muted" style={{ marginBottom: 8 }}>
             High listing velocity (7d, ≥6): <strong>{velocityQ.data?.count ?? 0}</strong> agents
+          </p>
+        )}
+        {!dupPropsQ.isLoading && !dupPropsQ.error && (
+          <p className="muted" style={{ marginBottom: 0 }}>
+            Property duplicate signals:{' '}
+            <strong>
+              {(dupPropsQ.data?.coordinate_duplicates.length ?? 0) +
+                (dupPropsQ.data?.title_number_duplicates.length ?? 0) +
+                (dupPropsQ.data?.owner_name_duplicates.length ?? 0) +
+                (dupPropsQ.data?.image_reuse_duplicates.length ?? 0)}
+            </strong>{' '}
+            groups (
+            {dupPropsQ.data?.coordinate_duplicates.length ?? 0} coords,{' '}
+            {dupPropsQ.data?.title_number_duplicates.length ?? 0} title numbers,{' '}
+            {dupPropsQ.data?.owner_name_duplicates.length ?? 0} owners,{' '}
+            {dupPropsQ.data?.image_reuse_duplicates.length ?? 0} image reuse)
           </p>
         )}
       </div>
