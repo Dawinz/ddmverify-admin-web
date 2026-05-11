@@ -53,7 +53,10 @@ export default function AdminAgentsPage() {
       if (args.reason) body.reason = args.reason;
       await apiPost(`/admin/agents/${args.agent.id}/badge-review`, token, body);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] }),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] });
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'agent', variables.agent.id] });
+    },
   });
 
   if (agentsQ.isLoading) return <p className="muted">Loading agents...</p>;
