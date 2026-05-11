@@ -2,6 +2,7 @@ import {
   Bell,
   BookOpenCheck,
   Building2,
+  ClipboardList,
   CreditCard,
   Handshake,
   House,
@@ -23,5 +24,6 @@ export const adminNav = [
   { href: '/admin/payment-proofs', label: 'Payment Proofs', icon: BookOpenCheck },
   { href: '/admin/notifications', label: 'Notifications', icon: Bell },
   { href: '/admin/verification', label: 'Verification', icon: ShieldCheck },
+  { href: '/admin/audit', label: 'Audit log', icon: ClipboardList },
   { href: '/admin/reports', label: 'Reports', icon: ShieldAlert },
 ] as const;

@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { apiGet } from '@/lib/api';
 import { formatAdminDateTime } from '@/lib/format-datetime';
@@ -11,14 +12,19 @@ type PendingItem = {
   location: string | null;
   category: string;
   verification_status: string;
+  review_note?: string | null;
   verification_stage?: number;
   land_search_status?: string | null;
   deal_status?: string | null;
   created_at: string;
 };
 
+const PAGE_SIZE = 50;
+
 export default function AdminVerificationPage() {
   const [items, setItems] = useState<PendingItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
@@ -28,21 +34,36 @@ export default function AdminVerificationPage() {
   const [searchFilter, setSearchFilter] = useState('all');
   const [actionsOpenForId, setActionsOpenForId] = useState<string | null>(null);
   const [selected, setSelected] = useState<PendingItem | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
 
-  async function load() {
-    const { data: { session } } = await supabase.auth.getSession();
+  const load = useCallback(async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     if (!session?.access_token) return;
     try {
-      const data = await apiGet<{ items: PendingItem[] }>('/verification/pending', session.access_token);
+      const data = await apiGet<{ items: PendingItem[]; total: number }>(
+        `/verification/pending?page=${page}&limit=${PAGE_SIZE}`,
+        session.access_token,
+      );
       setItems(data.items);
+      setTotal(typeof data.total === 'number' ? data.total : data.items.length);
+      setError('');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load');
     } finally {
       setLoading(false);
     }
-  }
+  }, [page]);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    setLoading(true);
+    void load();
+  }, [load]);
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [page]);
 
   async function approve(propertyId: string) {
     const { data: { session } } = await supabase.auth.getSession();
@@ -55,6 +76,7 @@ export default function AdminVerificationPage() {
       });
       if (!res.ok) throw new Error('Approve failed');
       setItems((prev) => prev.filter((p) => p.id !== propertyId));
+      setTotal((t) => Math.max(0, t - 1));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to approve');
     }
@@ -72,6 +94,7 @@ export default function AdminVerificationPage() {
       });
       if (!res.ok) throw new Error('Reject failed');
       setItems((prev) => prev.filter((p) => p.id !== propertyId));
+      setTotal((t) => Math.max(0, t - 1));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to reject');
     }
@@ -79,10 +102,10 @@ export default function AdminVerificationPage() {
 
   async function applyDecision(
     propertyId: string,
-    endpoint: 'needs-changes' | 'suspend',
+    endpoint: 'needs-changes' | 'suspend' | 'request-changes' | 'reopen' | 'escalate',
     label: string,
   ) {
-    const reason = window.prompt(`${label} reason (optional):`) ?? '';
+    const reason = window.prompt(`${label} note (optional):`) ?? '';
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.access_token) return;
     try {
@@ -92,7 +115,7 @@ export default function AdminVerificationPage() {
         body: JSON.stringify({ property_id: propertyId, reason: reason || undefined }),
       });
       if (!res.ok) throw new Error(`${label} failed`);
-      setItems((prev) => prev.filter((p) => p.id !== propertyId));
+      await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : `Failed to ${label.toLowerCase()}`);
     }
@@ -168,9 +191,59 @@ export default function AdminVerificationPage() {
   });
   const categories = Array.from(new Set(items.map((p) => p.category).filter(Boolean))).sort((a, b) => a.localeCompare(b));
 
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAllFiltered() {
+    const ids = filtered.map((p) => p.id);
+    const allOn = ids.length > 0 && ids.every((id) => selectedIds.has(id));
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allOn) ids.forEach((id) => next.delete(id));
+      else ids.forEach((id) => next.add(id));
+      return next;
+    });
+  }
+
+  async function bulkAction(action: 'approve' | 'reject' | 'needs_changes' | 'suspend') {
+    const ids = filtered.filter((p) => selectedIds.has(p.id)).map((p) => p.id);
+    if (ids.length === 0) return;
+    const reason =
+      action === 'reject' || action === 'needs_changes' || action === 'suspend'
+        ? window.prompt(action === 'reject' ? 'Reason (optional):' : 'Note (optional):') ?? ''
+        : '';
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/verification/bulk-action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ action, property_ids: ids, reason: reason || undefined }),
+      });
+      if (!res.ok) throw new Error('Bulk action failed');
+      setSelectedIds(new Set());
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Bulk action failed');
+    }
+  }
+
   return (
     <div>
       <h1 className="page-title">Verification (pending)</h1>
+      <p className="muted" style={{ marginTop: -8, marginBottom: 12 }}>
+        Moderation reports live under <strong>Reports</strong>. This queue is for <strong>listing verification</strong> only.
+      </p>
       {error && <p style={{ color: '#dc2626', marginBottom: 16 }}>{error}</p>}
       <div className="panel" style={{ marginBottom: 16 }}>
         <div
@@ -228,15 +301,42 @@ export default function AdminVerificationPage() {
             <select value={dealFilter} onChange={(e) => setDealFilter(e.target.value)} style={{ border: '1px solid #cbd5e1', borderRadius: 10, padding: '10px 12px' }}>
               <option value="all">All</option>
               <option value="active">active</option>
-              <option value="closed">closed</option>
+              <option value="completed">completed</option>
+              <option value="disputed">disputed</option>
+              <option value="cancelled">cancelled</option>
             </select>
           </label>
         </div>
+      </div>
+      <div className="panel" style={{ marginBottom: 16, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+        <span className="muted" style={{ marginRight: 8 }}>
+          {selectedIds.size} selected on this page
+        </span>
+        <button type="button" className="btn btn-success" disabled={selectedIds.size === 0} onClick={() => void bulkAction('approve')}>
+          Bulk approve
+        </button>
+        <button type="button" className="btn btn-neutral" disabled={selectedIds.size === 0} onClick={() => void bulkAction('needs_changes')}>
+          Bulk needs changes
+        </button>
+        <button type="button" className="btn btn-neutral" disabled={selectedIds.size === 0} onClick={() => void bulkAction('suspend')}>
+          Bulk suspend
+        </button>
+        <button type="button" className="btn btn-danger" disabled={selectedIds.size === 0} onClick={() => void bulkAction('reject')}>
+          Bulk reject
+        </button>
       </div>
       <div className="panel panel-scroll">
         <table className="admin-table">
           <thead>
             <tr>
+              <th style={{ width: 36 }}>
+                <input
+                  type="checkbox"
+                  aria-label="Select all on page"
+                  checked={filtered.length > 0 && filtered.every((p) => selectedIds.has(p.id))}
+                  onChange={toggleSelectAllFiltered}
+                />
+              </th>
               <th>Title</th>
               <th>Location</th>
               <th>Category</th>
@@ -248,16 +348,23 @@ export default function AdminVerificationPage() {
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 && <tr><td colSpan={8} style={{ textAlign: 'center', padding: 24 }}>No matching verifications</td></tr>}
+            {filtered.length === 0 && <tr><td colSpan={9} style={{ textAlign: 'center', padding: 24 }}>No matching verifications</td></tr>}
             {filtered.map((p) => {
               const stage = p.verification_stage ?? 1;
               const landSearch = p.land_search_status ?? (stage >= 4 ? 'in_progress' : 'not_started');
               const deal = p.deal_status ?? 'active';
               const actionsVisible = actionsOpenForId === p.id;
               return (
-                <>
-              <tr key={p.id}>
-                <td style={{ minWidth: 170 }}>{p.title}</td>
+                <Fragment key={p.id}>
+              <tr>
+                <td>
+                  <input type="checkbox" checked={selectedIds.has(p.id)} onChange={() => toggleSelect(p.id)} aria-label={`Select ${p.title}`} />
+                </td>
+                <td style={{ minWidth: 170 }}>
+                  <Link href={`/admin/properties/${encodeURIComponent(p.id)}`} className="link-sm">
+                    {p.title}
+                  </Link>
+                </td>
                 <td style={{ minWidth: 180 }}>{p.location ?? '—'}</td>
                 <td style={{ whiteSpace: 'nowrap' }}>{p.category}</td>
                 <td style={{ whiteSpace: 'nowrap' }}>{formatAdminDateTime(p.created_at)}</td>
@@ -276,8 +383,8 @@ export default function AdminVerificationPage() {
                 </td>
               </tr>
               {actionsVisible && (
-                <tr key={`${p.id}-actions`}>
-                  <td colSpan={8} style={{ background: '#f8fafc' }}>
+                <tr>
+                  <td colSpan={9} style={{ background: '#f8fafc' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(132px, 1fr))', gap: 8, padding: 10 }}>
                       <button type="button" className="btn btn-neutral" onClick={() => moveStage(p.id, Math.min(7, stage + 1))}>
                         Next Stage
@@ -297,8 +404,17 @@ export default function AdminVerificationPage() {
                       <button type="button" className="btn btn-neutral" onClick={() => applyDecision(p.id, 'needs-changes', 'Needs changes')}>
                         Needs changes
                       </button>
+                      <button type="button" className="btn btn-neutral" onClick={() => applyDecision(p.id, 'request-changes', 'Request changes')}>
+                        Request changes
+                      </button>
                       <button type="button" className="btn btn-neutral" onClick={() => applyDecision(p.id, 'suspend', 'Suspend')}>
                         Suspend
+                      </button>
+                      <button type="button" className="btn btn-neutral" onClick={() => applyDecision(p.id, 'escalate', 'Escalate')}>
+                        Escalate
+                      </button>
+                      <button type="button" className="btn btn-neutral" onClick={() => applyDecision(p.id, 'reopen', 'Reopen')}>
+                        Reopen
                       </button>
                       <button type="button" className="btn btn-danger" onClick={() => reject(p.id)}>
                         Reject
@@ -307,10 +423,23 @@ export default function AdminVerificationPage() {
                   </td>
                 </tr>
               )}
-                </>
+                </Fragment>
             );})}
           </tbody>
         </table>
+      </div>
+      <div className="panel" style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', justifyContent: 'space-between' }}>
+        <span className="muted">
+          Page {page} of {totalPages} · {total} total pending
+        </span>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button type="button" className="btn btn-neutral" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+            Previous
+          </button>
+          <button type="button" className="btn btn-neutral" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+            Next
+          </button>
+        </div>
       </div>
       {selected && (
         <div
@@ -340,7 +469,14 @@ export default function AdminVerificationPage() {
               <div><strong>Gov search:</strong> {selected.land_search_status ?? ((selected.verification_stage ?? 1) >= 4 ? 'in_progress' : 'not_started')}</div>
               <div><strong>Deal:</strong> {selected.deal_status ?? 'active'}</div>
               <div><strong>Status:</strong> {selected.verification_status}</div>
+              <div><strong>Review note:</strong> {selected.review_note ?? '—'}</div>
               <div style={{ gridColumn: '1 / -1' }}><strong>Property ID:</strong> <code>{selected.id}</code></div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <strong>Open property:</strong>{' '}
+                <Link href={`/admin/properties/${encodeURIComponent(selected.id)}`} className="link-sm">
+                  Property details
+                </Link>
+              </div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
               <button type="button" className="btn btn-neutral" onClick={() => setSelected(null)}>
