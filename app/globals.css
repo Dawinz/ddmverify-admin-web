@@ -659,6 +659,27 @@ input[type="number"] {
   margin-bottom: 16px;
 }
 
+.metric-grid-wide {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+.dashboard-section-title {
+  font-size: 1.05rem;
+  margin: 0 0 10px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.dashboard-section {
+  margin-bottom: 20px;
+}
+
+.btn-active-dash {
+  border-color: var(--ddm-accent) !important;
+  color: #0f172a !important;
+  background: #eff6ff !important;
+}
+
 .kpi-card {
   background: #fff;
   border-radius: 12px;

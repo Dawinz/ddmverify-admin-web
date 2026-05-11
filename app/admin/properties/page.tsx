@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiDelete } from '@/lib/api';
 import { formatAdminDateTime } from '@/lib/format-datetime';
@@ -21,13 +22,28 @@ type Property = {
 
 export default function AdminPropertiesPage() {
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
+  const createdFrom = searchParams.get('created_from');
+  const createdTo = searchParams.get('created_to');
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(25);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+
+  const propertiesPath = useMemo(() => {
+    const p = new URLSearchParams();
+    p.set('page', String(page));
+    p.set('limit', String(limit));
+    if (createdFrom && createdTo) {
+      p.set('created_from', createdFrom);
+      p.set('created_to', createdTo);
+    }
+    return `/admin/properties?${p.toString()}`;
+  }, [page, limit, createdFrom, createdTo]);
+
   const propertiesQ = useAdminQuery<{ items: Property[]; total: number }>({
-    key: ['admin', 'properties', String(page), String(limit)],
-    path: `/admin/properties?page=${page}&limit=${limit}`,
+    key: ['admin', 'properties', propertiesPath],
+    path: propertiesPath,
   });
   const allItems = propertiesQ.data?.items ?? [];
   const items = allItems.filter((p) => {
@@ -58,6 +74,15 @@ export default function AdminPropertiesPage() {
   return (
     <div>
       <h1 className="page-title">Properties ({total})</h1>
+      {createdFrom && createdTo && (
+        <p className="muted" style={{ marginBottom: 12 }}>
+          Filtered by created date {createdFrom} → {createdTo} (
+          <Link href="/admin/properties" className="link-sm">
+            clear
+          </Link>
+          )
+        </p>
+      )}
       <div className="panel" style={{ marginBottom: 16, padding: 12 }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1fr) minmax(130px, 170px) minmax(120px, 160px)', gap: 10 }}>
           <input
