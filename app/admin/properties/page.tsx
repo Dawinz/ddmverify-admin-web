@@ -25,10 +25,21 @@ export default function AdminPropertiesPage() {
   const searchParams = useSearchParams();
   const createdFrom = searchParams.get('created_from');
   const createdTo = searchParams.get('created_to');
+  const agentIdFilter = searchParams.get('agent_id')?.trim() ?? '';
+  const verificationFromUrl = searchParams.get('verification_status')?.trim().toLowerCase() ?? '';
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(25);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+
+  const clearAgentFiltersHref = useMemo(() => {
+    const q = new URLSearchParams();
+    if (createdFrom && createdTo) {
+      q.set('created_from', createdFrom);
+      q.set('created_to', createdTo);
+    }
+    return q.toString() ? `/admin/properties?${q}` : '/admin/properties';
+  }, [createdFrom, createdTo]);
 
   const propertiesPath = useMemo(() => {
     const p = new URLSearchParams();
@@ -38,8 +49,14 @@ export default function AdminPropertiesPage() {
       p.set('created_from', createdFrom);
       p.set('created_to', createdTo);
     }
+    if (agentIdFilter.length > 0) {
+      p.set('agent_id', agentIdFilter);
+    }
+    if (verificationFromUrl.length > 0) {
+      p.set('verification_status', verificationFromUrl);
+    }
     return `/admin/properties?${p.toString()}`;
-  }, [page, limit, createdFrom, createdTo]);
+  }, [page, limit, createdFrom, createdTo, agentIdFilter, verificationFromUrl]);
 
   const propertiesQ = useAdminQuery<{ items: Property[]; total: number }>({
     key: ['admin', 'properties', propertiesPath],
@@ -83,6 +100,19 @@ export default function AdminPropertiesPage() {
           )
         </p>
       )}
+      {(agentIdFilter.length > 0 || verificationFromUrl.length > 0) && (
+        <p className="muted" style={{ marginBottom: 12 }}>
+          {agentIdFilter.length > 0 && (
+            <>
+              Agent filter active ({agentIdFilter.slice(0, 8)}…){' '}
+            </>
+          )}
+          {verificationFromUrl.length > 0 && <>Verification: {verificationFromUrl}. </>}
+          <Link href={clearAgentFiltersHref} className="link-sm">
+            clear agent / status filters
+          </Link>
+        </p>
+      )}
       <div className="panel" style={{ marginBottom: 16, padding: 12 }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1fr) minmax(130px, 170px) minmax(120px, 160px)', gap: 10 }}>
           <input
@@ -100,6 +130,8 @@ export default function AdminPropertiesPage() {
             <option value="pending">pending</option>
             <option value="verified">verified</option>
             <option value="rejected">rejected</option>
+            <option value="needs_changes">needs_changes</option>
+            <option value="suspended">suspended</option>
           </select>
           <select
             value={String(limit)}

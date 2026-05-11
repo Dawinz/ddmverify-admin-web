@@ -25,6 +25,27 @@ function str(v: unknown): string {
   return s.length ? s : '—';
 }
 
+function readApplicationMeta(agent: JsonRecord): Record<string, string> {
+  const raw = agent['badge_application_meta'];
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (v == null || typeof v === 'object') continue;
+    const t = String(v).trim();
+    if (t.length > 0) out[k] = t;
+  }
+  return out;
+}
+
+const META_LABELS: Record<string, string> = {
+  full_name: 'Full name (as submitted)',
+  phone_number: 'Phone',
+  email: 'Email',
+  location: 'Location / coverage',
+  years_of_experience: 'Years of experience',
+  type: 'Applicant type',
+};
+
 export default function AdminAgentDetailPage() {
   const params = useParams();
   const id = typeof params?.id === 'string' ? params.id : '';
@@ -134,39 +155,99 @@ export default function AdminAgentDetailPage() {
             <strong>Last badge / review note:</strong> {str(agent.badge_rejection_reason)}
           </p>
         )}
-        <div style={{ marginTop: 14, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {str(agent.verification_document_url) !== '—' && (
+      </div>
+
+      <div className="panel" style={{ marginBottom: 16, padding: 16 }}>
+        <h2 style={{ marginTop: 0, fontSize: '1.05rem' }}>Application &amp; documents (from mobile)</h2>
+        <p className="muted" style={{ marginTop: 4, marginBottom: 12 }}>
+          Details and uploads from the user&apos;s &quot;Become an agent&quot; request. Open each file in a new tab to
+          review.
+        </p>
+        {(() => {
+          const meta = readApplicationMeta(agent);
+          const metaKeys = Object.keys(meta);
+          return (
+            <div style={{ marginBottom: 14 }}>
+              {metaKeys.length === 0 ? (
+                <p className="muted" style={{ marginBottom: 8 }}>
+                  No application form snapshot stored yet (submissions after the latest deploy will appear here).
+                </p>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
+                  {metaKeys.map((key) => (
+                    <div key={key}>
+                      <span className="muted">{META_LABELS[key] ?? key}</span>
+                      <div style={{ wordBreak: 'break-word' }}>{meta[key]}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+          {str(agent.verification_document_url) !== '—' ? (
             <a className="btn btn-neutral" href={String(agent.verification_document_url)} target="_blank" rel="noreferrer">
-              Open ID / passport
+              Government ID / passport (file)
             </a>
+          ) : (
+            <span className="muted">Government ID: not uploaded</span>
           )}
-          {str(agent.business_license_url) !== '—' && (
+          {str(agent.business_license_url) !== '—' ? (
             <a className="btn btn-neutral" href={String(agent.business_license_url)} target="_blank" rel="noreferrer">
-              Open business license
+              Business license (file)
             </a>
+          ) : (
+            <span className="muted">Business license: not uploaded</span>
           )}
-          {str(agent.selfie_verification_url) !== '—' && (
+          {str(agent.selfie_verification_url) !== '—' ? (
             <a className="btn btn-neutral" href={String(agent.selfie_verification_url)} target="_blank" rel="noreferrer">
-              Open verification selfie
+              Verification selfie (file)
             </a>
+          ) : (
+            <span className="muted">Selfie: not uploaded</span>
           )}
         </div>
       </div>
 
       <div className="panel" style={{ marginBottom: 16, padding: 12 }}>
         <h2 style={{ marginTop: 0, fontSize: '1.05rem' }}>Reputation (aggregates)</h2>
+        <p className="muted" style={{ marginBottom: 10 }}>
+          Jump to this agent&apos;s listings in Properties (opens in same tab).
+        </p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
           <span>
-            Listings: <strong>{str(rep.listings_total)}</strong>
+            Listings:{' '}
+            <Link href={`/admin/properties?agent_id=${encodeURIComponent(id)}`} className="link-sm">
+              <strong>{str(rep.listings_total)}</strong>
+            </Link>
           </span>
           <span>
-            Verified listings: <strong>{str(rep.listings_verified)}</strong>
+            Verified:{' '}
+            <Link
+              href={`/admin/properties?agent_id=${encodeURIComponent(id)}&verification_status=verified`}
+              className="link-sm"
+            >
+              <strong>{str(rep.listings_verified)}</strong>
+            </Link>
           </span>
           <span>
-            Rejected listings: <strong>{str(rep.listings_rejected)}</strong>
+            Rejected:{' '}
+            <Link
+              href={`/admin/properties?agent_id=${encodeURIComponent(id)}&verification_status=rejected`}
+              className="link-sm"
+            >
+              <strong>{str(rep.listings_rejected)}</strong>
+            </Link>
           </span>
           <span>
-            Pending listings: <strong>{str(rep.listings_pending)}</strong>
+            Pending:{' '}
+            <Link
+              href={`/admin/properties?agent_id=${encodeURIComponent(id)}&verification_status=pending`}
+              className="link-sm"
+            >
+              <strong>{str(rep.listings_pending)}</strong>
+            </Link>
           </span>
           <span>
             Deals closed: <strong>{str(rep.deals_closed)}</strong>
@@ -270,14 +351,26 @@ export default function AdminAgentDetailPage() {
                 </td>
               </tr>
             )}
-            {(q.data?.properties_recent ?? []).map((p, idx) => (
-              <tr key={idx}>
-                <td>{str(p.title)}</td>
-                <td>{str(p.verification_status)}</td>
-                <td>{str(p.listing_status)}</td>
-                <td>{formatAdminDateTime(String(p.created_at ?? ''))}</td>
-              </tr>
-            ))}
+            {(q.data?.properties_recent ?? []).map((p, idx) => {
+              const rawId = (p as JsonRecord)['id'];
+              const pid = typeof rawId === 'string' ? rawId : rawId != null ? String(rawId) : '';
+              return (
+                <tr key={pid.length > 0 ? pid : `recent-${idx}`}>
+                  <td>
+                    {pid ? (
+                      <Link href={`/admin/properties/${encodeURIComponent(pid)}`} className="link-sm">
+                        {str(p.title)}
+                      </Link>
+                    ) : (
+                      str(p.title)
+                    )}
+                  </td>
+                  <td>{str(p.verification_status)}</td>
+                  <td>{str(p.listing_status)}</td>
+                  <td>{formatAdminDateTime(String(p.created_at ?? ''))}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -301,14 +394,28 @@ export default function AdminAgentDetailPage() {
                 </td>
               </tr>
             )}
-            {(q.data?.listing_reports_open ?? []).map((r, idx) => (
-              <tr key={idx}>
-                <td>{str(r.property_title)}</td>
-                <td>{str(r.reason)}</td>
-                <td>{str(r.status)}</td>
-                <td>{formatAdminDateTime(String(r.created_at ?? ''))}</td>
-              </tr>
-            ))}
+            {(q.data?.listing_reports_open ?? []).map((r, idx) => {
+              const rawProp = (r as JsonRecord)['property_id'];
+              const rid = typeof rawProp === 'string' ? rawProp : rawProp != null ? String(rawProp) : '';
+              const rawRid = (r as JsonRecord)['id'];
+              const rowKey = typeof rawRid === 'string' && rawRid.length > 0 ? rawRid : `report-${idx}`;
+              return (
+                <tr key={rowKey}>
+                  <td>
+                    {rid ? (
+                      <Link href={`/admin/properties/${encodeURIComponent(rid)}`} className="link-sm">
+                        {str(r.property_title)}
+                      </Link>
+                    ) : (
+                      str(r.property_title)
+                    )}
+                  </td>
+                  <td>{str(r.reason)}</td>
+                  <td>{str(r.status)}</td>
+                  <td>{formatAdminDateTime(String(r.created_at ?? ''))}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
