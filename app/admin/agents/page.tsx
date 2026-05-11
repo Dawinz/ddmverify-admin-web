@@ -43,7 +43,10 @@ export default function AdminAgentsPage() {
       if (!token) throw new Error('No active session.');
       await apiPatch(`/admin/agents/${agent.id}`, token, { verified: !agent.verified });
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] }),
+    onSuccess: (_data, agent) => {
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] });
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agent.id] });
+    },
   });
   const badgeMutation = useMutation({
     mutationFn: async (args: { agent: Agent; status: string; reason?: string }) => {
